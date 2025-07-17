@@ -29,6 +29,11 @@ data/derived/*
 !data/derived/dir_description.md
 
 ################
+# VSCODE
+################
+.code-workspace
+
+################
 # R
 ################
 
