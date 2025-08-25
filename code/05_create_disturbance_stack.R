@@ -7,6 +7,9 @@
 ### Returns and saves a final stacked spatRaster.
 
 
+# If working in cyverse, set working directory and project root
+setwd("/home/jovyan/data-store/forest-disturbance-stack-v3")
+here::i_am("README.md")   # or any file guaranteed to exist in the project
 
 
 # Install and load required packages
@@ -175,7 +178,7 @@ message("Template saved to: ", output_path_temp)
 
 
 # File paths
-template_path <- here("data", "manual", "template_30m_2000_2020.tif")            # defines target resolution
+template_path <- here("data", "derived", "template_30m_2000_2020.tif")            # defines target resolution
 
 forest_mask_path <- here("data", "derived", "relaxed_forest_mask_2000_2020.tif") # forest mask
 
@@ -186,7 +189,7 @@ raster_paths <- list(
   here("data", "derived", "pdsi_annual.tif")                                     # water balance
 )
 
-output_path <- here("data", "manual", "disturbance_stack_resampled_masked_30m_2000_2020.tif")
+output_path <- here("data", "derived", "disturbance_stack_resampled_masked_30m_2000_2020.tif")
 
 # Example thresholds
 biotic_sev_thresholds <- c(0, 25, 50)
@@ -208,10 +211,6 @@ disturbance_stack <- stack_resample_mask(
 
 
 ###############################################################################
-
-
-
-
 
 
 
