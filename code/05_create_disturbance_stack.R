@@ -12,6 +12,7 @@ setwd("/home/jovyan/data-store/forest-disturbance-stack-v3")
 here::i_am("README.md")   # or any file guaranteed to exist in the project
 
 
+
 # Install and load required packages
 packages <- c("here", "terra")
 installed <- packages %in% installed.packages()[, "Package"]
@@ -21,6 +22,10 @@ if (any(!installed)) {
 
 library(here)
 library(terra)
+
+# Set cyverse memory max to avoid crashing
+terraOptions(memmax=256)
+
 
 
 
