@@ -21,112 +21,72 @@ INPUTS=(
     "${RESAMPLED_DIR}/pdsi_annual_30m_resampled.tif"
 )
 
+# Raster type for masking: "categorical" or "continuous"
+INPUT_TYPES=(
+    "categorical"  # wildfire_id
+    "categorical"  # biotic
+    "categorical"  # hd
+    "continuous"   # pdsi
+)
+
 # create output dir
 mkdir -p "$ANNUAL_STACK_DIR"
 
 # ------------------------------
-# Sanity checks for required tools & files
+# Sanity checks
 # ------------------------------
-command -v gdalinfo >/dev/null 2>&1 || { echo "gdalinfo not found"; exit 1; }
-command -v gdalwarp >/dev/null 2>&1 || { echo "gdalwarp not found"; exit 1; }
-command -v gdal_calc.py >/dev/null 2>&1 || { echo "gdal_calc.py not found"; exit 1; }
-command -v gdal_merge.py >/dev/null 2>&1 || { echo "gdal_merge.py not found"; exit 1; }
-command -v jq >/dev/null 2>&1 || { echo "jq not found; please install jq"; exit 1; }
-command -v bc >/dev/null 2>&1 || { echo "bc not found; please install bc"; exit 1; }
+for cmd in gdalinfo gdalwarp gdal_calc.py gdal_merge.py jq bc; do
+    command -v $cmd >/dev/null 2>&1 || { echo "$cmd not found"; exit 1; }
+done
 
-if [ ! -f "$TEMPLATE" ]; then
-  echo "Template not found: $TEMPLATE"
-  exit 1
-fi
-if [ ! -f "$MASK" ]; then
-  echo "Forest mask not found: $MASK"
-  exit 1
-fi
+[ ! -f "$TEMPLATE" ] && { echo "Template not found: $TEMPLATE"; exit 1; }
+[ ! -f "$MASK" ] && { echo "Forest mask not found: $MASK"; exit 1; }
 
 # ------------------------------
-# Step 0: Align forest mask to template (force exact origin/extent)
+# Step 0: Align forest mask
 # ------------------------------
 MASK_ALIGNED="${RESAMPLED_DIR}/forest_mask_30m_resampled_aligned.tif"
 if [ ! -f "$MASK_ALIGNED" ]; then
     echo "Aligning forest mask to template..."
-
-    # Extract numeric bounding box using GDAL JSON (safe & robust)
-    bbox=$(gdalinfo -json "$TEMPLATE" | jq -r '
-      .cornerCoordinates | "\(.upperLeft[0]) \(.upperLeft[1]) \(.lowerRight[0]) \(.lowerRight[1])"
-    ')
-
-    # Read into variables
+    bbox=$(gdalinfo -json "$TEMPLATE" | jq -r '.cornerCoordinates | "\(.upperLeft[0]) \(.upperLeft[1]) \(.lowerRight[0]) \(.lowerRight[1])"')
     read -r ULX ULY LRX LRY <<< "$bbox"
-
-    echo "Template bounding box (numeric):"
-    echo " ULX=$ULX"
-    echo " ULY=$ULY"
-    echo " LRX=$LRX"
-    echo " LRY=$LRY"
-
-    # Basic validation
-    if [ -z "$ULX" ] || [ -z "$ULY" ] || [ -z "$LRX" ] || [ -z "$LRY" ]; then
-        echo "ERROR: Could not parse template bbox (empty). Aborting."
-        exit 1
-    fi
-
-    # Ensure ULX < LRX and LRY < ULY
-    if [ "$(echo "$ULX >= $LRX" | bc -l)" -eq 1 ]; then
-        echo "ERROR: Parsed bounding box is flipped horizontally (ULX >= LRX). Aborting."
-        exit 1
-    fi
-    if [ "$(echo "$LRY >= $ULY" | bc -l)" -eq 1 ]; then
-        echo "ERROR: Parsed bounding box is flipped vertically (LRY >= ULY). Aborting."
-        exit 1
-    fi
-
-    # Run gdalwarp to exactly align the mask to the template bounds & resolution
-    echo "Running gdalwarp to align mask..."
-    gdalwarp -overwrite -r near \
-      -te "$ULX" "$LRY" "$LRX" "$ULY" \
-      -tr 30 30 \
-      -t_srs EPSG:5070 \
-      -co COMPRESS=LZW -co TILED=YES -co BIGTIFF=YES \
-      "$MASK" "$MASK_ALIGNED"
-
-    echo "✓ Mask aligned to template: $MASK_ALIGNED"
+    gdalwarp -overwrite -r near -te "$ULX" "$LRY" "$LRX" "$ULY" -tr 30 30 -t_srs EPSG:5070 \
+        -co COMPRESS=LZW -co TILED=YES -co BIGTIFF=YES "$MASK" "$MASK_ALIGNED"
+    echo "✓ Mask aligned: $MASK_ALIGNED"
 else
     echo "Aligned mask already exists: $MASK_ALIGNED"
 fi
 
 # ------------------------------
-# Step 1: Loop through years and create annual stacks
+# Step 1: Loop through years
 # ------------------------------
 echo "Starting per-year stacking..."
 for YEAR in {2000..2020}; do
     echo "Processing year $YEAR..."
     STACK_FILE="${ANNUAL_STACK_DIR}/annual_stack_${YEAR}.tif"
+    [ -f "$STACK_FILE" ] && { echo "  Stack exists, skipping"; continue; }
 
-    # Skip if already exists
-    if [ -f "$STACK_FILE" ]; then
-        echo "  Stack already exists, skipping: $STACK_FILE"
-        continue
-    fi
-
-    # Build list of per-variable masked band files for this year
     MASKED_LIST=()
+    BAND_IDX=$(( YEAR - 2000 + 1 ))
 
-    BAND_IDX=$(( YEAR - 2000 + 1 ))   # band index in the 2000..2020 subset (1..21)
-    for RASTER in "${INPUTS[@]}"; do
+    for i in "${!INPUTS[@]}"; do
+        RASTER="${INPUTS[$i]}"
+        TYPE="${INPUT_TYPES[$i]}"
         BASENAME=$(basename "$RASTER" .tif)
         OUT_MASKED="${RESAMPLED_DIR}/${BASENAME}_masked_${YEAR}.tif"
 
         if [ ! -f "$OUT_MASKED" ]; then
-            echo "  Masking $BASENAME band ${BAND_IDX} -> $(basename "$OUT_MASKED")"
-            # Extract the requested band and apply the aligned mask in one step:
-            # Use gdal_calc.py with A = band from multi-band file, B = mask
-            gdal_calc.py --overwrite \
- 		 -A "$RASTER" --A_band="$BAND_IDX" \
- 		 -B "$MASK_ALIGNED" \
- 		 --outfile="$OUT_MASKED" \
- 		 --calc="numpy.where(B==1, A, numpy.nan)" \
- 		 --NoDataValue="nan" --type=Float32 \
- 		 --co="COMPRESS=LZW" --co="TILED=YES" --co="BIGTIFF=YES"
+            echo "  Masking $BASENAME band $BAND_IDX"
+            if [ "$TYPE" = "categorical" ]; then
+                gdal_calc.py --overwrite -A "$RASTER" --A_band="$BAND_IDX" -B "$MASK_ALIGNED" \
+                    --outfile="$OUT_MASKED" --calc="A*B" --NoDataValue=0 --type=Byte \
+                    --co="COMPRESS=LZW" --co="TILED=YES" --co="BIGTIFF=YES"
+            else
+                gdal_calc.py --overwrite -A "$RASTER" --A_band="$BAND_IDX" -B "$MASK_ALIGNED" \
+                    --outfile="$OUT_MASKED" --calc="numpy.where(B >= 0.5, A.astype('float32'), numpy.nan)" \
+                    --NoDataValue="nan" --type=Float32 \
+                    --co="COMPRESS=LZW" --co="TILED=YES" --co="BIGTIFF=YES"
+            fi
         else
             echo "  Found existing masked file: $OUT_MASKED"
         fi
@@ -134,18 +94,12 @@ for YEAR in {2000..2020}; do
         MASKED_LIST+=("$OUT_MASKED")
     done
 
-    # Now merge the per-variable masked single-band files into a 4-band stack
-    echo "  Creating stack for $YEAR -> $STACK_FILE"
-    # Build a VRT that preserves input nodata as "nan"
-	VRT="${STACK_FILE%.tif}.vrt"
-	gdalbuildvrt -separate -vrtnodata nan "$VRT" "${MASKED_LIST[@]}"
-
-	# Translate VRT -> compressed GeoTIFF and mark NaN as nodata
-	gdal_translate -co COMPRESS=LZW -co TILED=YES -co BIGTIFF=YES \
-    		-a_nodata nan "$VRT" "$STACK_FILE"
-
-	# remove VRT (optional)
-	rm -f "$VRT"
+    # Merge masked single-band files into a multi-band stack
+    echo "  Creating stack: $STACK_FILE"
+    VRT="${STACK_FILE%.tif}.vrt"
+    gdalbuildvrt -separate -vrtnodata nan "$VRT" "${MASKED_LIST[@]}"
+    gdal_translate -co COMPRESS=LZW -co TILED=YES -co BIGTIFF=YES -a_nodata nan "$VRT" "$STACK_FILE"
+    rm -f "$VRT"
     echo "  ✅ Written: $STACK_FILE"
 done
 
