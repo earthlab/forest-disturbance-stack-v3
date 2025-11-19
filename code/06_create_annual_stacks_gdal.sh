@@ -121,11 +121,12 @@ for YEAR in {2000..2020}; do
             # Extract the requested band and apply the aligned mask in one step:
             # Use gdal_calc.py with A = band from multi-band file, B = mask
             gdal_calc.py --overwrite \
-              -A "$RASTER" --A_band="$BAND_IDX" \
-              -B "$MASK_ALIGNED" \
-              --outfile="$OUT_MASKED" \
-              --calc="A*B" --NoDataValue=0 \
-              --co="COMPRESS=LZW" --co="TILED=YES" --co="BIGTIFF=YES"
+ 		 -A "$RASTER" --A_band="$BAND_IDX" \
+ 		 -B "$MASK_ALIGNED" \
+ 		 --outfile="$OUT_MASKED" \
+ 		 --calc="numpy.where(B==1, A, numpy.nan)" \
+ 		 --NoDataValue="nan" --type=Float32 \
+ 		 --co="COMPRESS=LZW" --co="TILED=YES" --co="BIGTIFF=YES"
         else
             echo "  Found existing masked file: $OUT_MASKED"
         fi
@@ -135,7 +136,16 @@ for YEAR in {2000..2020}; do
 
     # Now merge the per-variable masked single-band files into a 4-band stack
     echo "  Creating stack for $YEAR -> $STACK_FILE"
-    gdal_merge.py -separate -o "$STACK_FILE" -co COMPRESS=LZW -co TILED=YES -co BIGTIFF=YES "${MASKED_LIST[@]}"
+    # Build a VRT that preserves input nodata as "nan"
+	VRT="${STACK_FILE%.tif}.vrt"
+	gdalbuildvrt -separate -vrtnodata nan "$VRT" "${MASKED_LIST[@]}"
+
+	# Translate VRT -> compressed GeoTIFF and mark NaN as nodata
+	gdal_translate -co COMPRESS=LZW -co TILED=YES -co BIGTIFF=YES \
+    		-a_nodata nan "$VRT" "$STACK_FILE"
+
+	# remove VRT (optional)
+	rm -f "$VRT"
     echo "  ✅ Written: $STACK_FILE"
 done
 
