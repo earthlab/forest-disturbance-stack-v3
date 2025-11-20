@@ -49,40 +49,9 @@ summary(masked_hd)
 summary(masked_pdsi)
 summary(test2000)
 
-summary(masked_biotic[[1]])
-mask <- rast("data/derived/resampled/forest_mask_30m_resampled_aligned.tif")
-freq(mask)
-sum(values(mask) == 1, na.rm=TRUE)
-
-plot(rast("data/derived/resampled/forest_mask_30m_resampled_aligned.tif"))
-
-res
-ext(res)
-
-forest_aligned <- rast("data/derived/resampled/forest_mask_30m_resampled_aligned.tif")
-ext(forest_aligned)
-crs(forest_aligned)
-res(forest_aligned)
-
-forest <- rast("data/derived/resampled/forest_mask_30m_resampled.tif")
-ext(forest)
-crs(forest)
-res(forest)
-
-ext(res)
-crs(res)
-res(res)
 
 
 
-plot(rast("data/derived/resampled/biotic_gridded_1km_all_years_severity_30m_resampled.tif"))
-
-unique(rast("data/derived/resampled/wildfire_id_2000_2020_subset.tif"))
-
-
-
-biotic_resampled <- rast("data/derived/resampled/biotic_gridded_1km_all_years_severity_30m_resampled.tif")
-summary(biotic_resampled[[1]])
 
 
 
