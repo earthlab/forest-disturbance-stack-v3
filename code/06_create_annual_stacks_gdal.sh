@@ -2,7 +2,7 @@
 set -euo pipefail
 
 echo "------------------------------------------------------------"
-echo " Creating annual disturbance stacks using GDAL (all Float32 for continuous) "
+echo " Creating annual disturbance stacks using GDAL "
 echo "------------------------------------------------------------"
 
 # ------------------------------
@@ -43,22 +43,32 @@ done
 [ ! -f "$MASK" ] && { echo "Forest mask not found: $MASK"; exit 1; }
 
 # ------------------------------
-# Step 0: Align forest mask to template
+# Step 0: Align forest mask to each input raster
 # ------------------------------
-MASK_ALIGNED="${RESAMPLED_DIR}/forest_mask_30m_resampled_aligned.tif"
-if [ ! -f "$MASK_ALIGNED" ]; then
-    echo "Aligning forest mask to template..."
-    bbox=$(gdalinfo -json "$TEMPLATE" | jq -r '.cornerCoordinates | "\(.upperLeft[0]) \(.upperLeft[1]) \(.lowerRight[0]) \(.lowerRight[1])"')
-    read -r ULX ULY LRX LRY <<< "$bbox"
-    gdalwarp -overwrite -r near -te "$ULX" "$LRY" "$LRX" "$ULY" -tr 30 30 -t_srs EPSG:5070 \
-        -co COMPRESS=LZW -co TILED=YES -co BIGTIFF=YES "$MASK" "$MASK_ALIGNED"
-    echo "✓ Mask aligned: $MASK_ALIGNED"
-else
-    echo "Aligned mask already exists: $MASK_ALIGNED"
-fi
+declare -A MASK_ALIGNED_MAP
+
+for i in "${!INPUTS[@]}"; do
+    RASTER="${INPUTS[$i]}"
+    BASENAME=$(basename "$RASTER" .tif)
+    ALIGNED_MASK="${RESAMPLED_DIR}/${BASENAME}_mask_aligned.tif"
+    MASK_ALIGNED_MAP[$RASTER]="$ALIGNED_MASK"
+
+    if [ ! -f "$ALIGNED_MASK" ]; then
+        echo "Aligning forest mask to $BASENAME..."
+        # Extract raster extent
+        bbox=$(gdalinfo -json "$RASTER" | jq -r '.cornerCoordinates | "\(.upperLeft[0]) \(.upperLeft[1]) \(.lowerRight[0]) \(.lowerRight[1])"')
+        read -r ULX ULY LRX LRY <<< "$bbox"
+
+        gdalwarp -overwrite -r near -te "$ULX" "$LRY" "$LRX" "$ULY" -tr 30 30 -t_srs EPSG:5070 \
+            -co COMPRESS=LZW -co TILED=YES -co BIGTIFF=YES "$MASK" "$ALIGNED_MASK"
+        echo "✓ Mask aligned for $BASENAME: $ALIGNED_MASK"
+    else
+        echo "Aligned mask already exists for $BASENAME: $ALIGNED_MASK"
+    fi
+done
 
 # ------------------------------
-# Step 1: Loop through years
+# Step 1: Loop through years and apply mask
 # ------------------------------
 echo "Starting per-year stacking..."
 for YEAR in {2000..2020}; do
@@ -74,19 +84,21 @@ for YEAR in {2000..2020}; do
         TYPE="${INPUT_TYPES[$i]}"
         BASENAME=$(basename "$RASTER" .tif)
         OUT_MASKED="${RESAMPLED_DIR}/${BASENAME}_masked_${YEAR}.tif"
+        MASK_ALIGNED="${MASK_ALIGNED_MAP[$RASTER]}"
 
         if [ ! -f "$OUT_MASKED" ]; then
             echo "  Masking $BASENAME band $BAND_IDX"
+
             if [ "$TYPE" = "categorical" ]; then
                 # integer multiplication for categorical
                 gdal_calc.py --overwrite -A "$RASTER" --A_band="$BAND_IDX" -B "$MASK_ALIGNED" \
                     --outfile="$OUT_MASKED" --calc="A*B" --NoDataValue=0 --type=Int32 \
                     --co="COMPRESS=LZW" --co="TILED=YES" --co="BIGTIFF=YES"
             else
-                # continuous: use numpy.where to mask, keep Float32
+                # continuous: keep Float32, mask outside forest as NaN
                 gdal_calc.py --overwrite -A "$RASTER" --A_band="$BAND_IDX" -B "$MASK_ALIGNED" \
                     --outfile="$OUT_MASKED" \
-                    --calc="numpy.where(B==1, A, numpy.nan)" \
+                    --calc="numpy.where(B == 1, A, numpy.nan)" \
                     --NoDataValue=nan --type=Float32 \
                     --co="COMPRESS=LZW" --co="TILED=YES" --co="BIGTIFF=YES"
             fi
