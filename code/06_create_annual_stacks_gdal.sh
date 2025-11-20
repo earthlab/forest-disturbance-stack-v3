@@ -2,7 +2,7 @@
 set -euo pipefail
 
 echo "------------------------------------------------------------"
-echo " Creating annual disturbance stacks using GDAL "
+echo " Creating annual disturbance stacks using GDAL (all Float32) "
 echo "------------------------------------------------------------"
 
 # ------------------------------
@@ -24,7 +24,7 @@ INPUTS=(
 # Raster type for masking: "categorical" or "continuous"
 INPUT_TYPES=(
     "categorical"  # wildfire_id
-    "categorical"  # biotic
+    "continuous"   # biotic
     "categorical"  # hd
     "continuous"   # pdsi
 )
@@ -76,17 +76,13 @@ for YEAR in {2000..2020}; do
         OUT_MASKED="${RESAMPLED_DIR}/${BASENAME}_masked_${YEAR}.tif"
 
         if [ ! -f "$OUT_MASKED" ]; then
-            echo "  Masking $BASENAME band $BAND_IDX"
-            if [ "$TYPE" = "categorical" ]; then
-                gdal_calc.py --overwrite -A "$RASTER" --A_band="$BAND_IDX" -B "$MASK_ALIGNED" \
-                    --outfile="$OUT_MASKED" --calc="A*B" --NoDataValue=0 --type=Byte \
-                    --co="COMPRESS=LZW" --co="TILED=YES" --co="BIGTIFF=YES"
-            else
-                gdal_calc.py --overwrite -A "$RASTER" --A_band="$BAND_IDX" -B "$MASK_ALIGNED" \
-                    --outfile="$OUT_MASKED" --calc="numpy.where(B >= 0.5, A.astype('float32'), numpy.nan)" \
-                    --NoDataValue="nan" --type=Float32 \
-                    --co="COMPRESS=LZW" --co="TILED=YES" --co="BIGTIFF=YES"
-            fi
+            echo "  Masking $BASENAME band $BAND_IDX (Float32)"
+            # Convert all rasters to Float32 for final stack
+            gdal_calc.py --overwrite -A "$RASTER" --A_band="$BAND_IDX" -B "$MASK_ALIGNED" \
+                --outfile="$OUT_MASKED" \
+                --calc="numpy.where(B >= 0.5, A, numpy.nan)" \
+                --NoDataValue=nan --type=Float32 \
+                --co="COMPRESS=LZW" --co="TILED=YES" --co="BIGTIFF=YES"
         else
             echo "  Found existing masked file: $OUT_MASKED"
         fi
