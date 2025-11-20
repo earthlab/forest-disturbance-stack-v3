@@ -2,7 +2,7 @@
 set -euo pipefail
 
 echo "------------------------------------------------------------"
-echo " Creating annual disturbance stacks using GDAL (all Float32) "
+echo " Creating annual disturbance stacks using GDAL (all Float32 for continuous) "
 echo "------------------------------------------------------------"
 
 # ------------------------------
@@ -43,7 +43,7 @@ done
 [ ! -f "$MASK" ] && { echo "Forest mask not found: $MASK"; exit 1; }
 
 # ------------------------------
-# Step 0: Align forest mask
+# Step 0: Align forest mask to template
 # ------------------------------
 MASK_ALIGNED="${RESAMPLED_DIR}/forest_mask_30m_resampled_aligned.tif"
 if [ ! -f "$MASK_ALIGNED" ]; then
@@ -76,13 +76,20 @@ for YEAR in {2000..2020}; do
         OUT_MASKED="${RESAMPLED_DIR}/${BASENAME}_masked_${YEAR}.tif"
 
         if [ ! -f "$OUT_MASKED" ]; then
-            echo "  Masking $BASENAME band $BAND_IDX (Float32)"
-            # Convert all rasters to Float32 for final stack
-            gdal_calc.py --overwrite -A "$RASTER" --A_band="$BAND_IDX" -B "$MASK_ALIGNED" \
-                --outfile="$OUT_MASKED" \
-                --calc="numpy.where(B >= 0.5, A, numpy.nan)" \
-                --NoDataValue=nan --type=Float32 \
-                --co="COMPRESS=LZW" --co="TILED=YES" --co="BIGTIFF=YES"
+            echo "  Masking $BASENAME band $BAND_IDX"
+            if [ "$TYPE" = "categorical" ]; then
+                # integer multiplication for categorical
+                gdal_calc.py --overwrite -A "$RASTER" --A_band="$BAND_IDX" -B "$MASK_ALIGNED" \
+                    --outfile="$OUT_MASKED" --calc="A*B" --NoDataValue=0 --type=Int32 \
+                    --co="COMPRESS=LZW" --co="TILED=YES" --co="BIGTIFF=YES"
+            else
+                # continuous: use numpy.where to mask, keep Float32
+                gdal_calc.py --overwrite -A "$RASTER" --A_band="$BAND_IDX" -B "$MASK_ALIGNED" \
+                    --outfile="$OUT_MASKED" \
+                    --calc="numpy.where(B==1, A, numpy.nan)" \
+                    --NoDataValue=nan --type=Float32 \
+                    --co="COMPRESS=LZW" --co="TILED=YES" --co="BIGTIFF=YES"
+            fi
         else
             echo "  Found existing masked file: $OUT_MASKED"
         fi
