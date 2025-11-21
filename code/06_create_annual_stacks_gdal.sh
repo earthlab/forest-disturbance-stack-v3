@@ -2,7 +2,7 @@
 set -euo pipefail
 
 echo "------------------------------------------------------------"
-echo " Creating annual disturbance stacks using GDAL (preserve zeros) "
+echo " Creating annual disturbance stacks using GDAL (Float32) "
 echo "------------------------------------------------------------"
 
 # ------------------------------
@@ -89,16 +89,13 @@ for YEAR in {2000..2020}; do
         if [ ! -f "$OUT_MASKED" ]; then
             echo "  Masking $BASENAME band $BAND_IDX"
 
-            # Use A*B for both categorical and continuous to preserve zeros
-            if [ "$TYPE" = "categorical" ]; then
-                gdal_calc.py --overwrite -A "$RASTER" --A_band="$BAND_IDX" -B "$MASK_ALIGNED" \
-                    --outfile="$OUT_MASKED" --calc="A*B" --NoDataValue=0 --type=Int32 \
-                    --co="COMPRESS=LZW" --co="TILED=YES" --co="BIGTIFF=YES"
-            else
-                gdal_calc.py --overwrite -A "$RASTER" --A_band="$BAND_IDX" -B "$MASK_ALIGNED" \
-                    --outfile="$OUT_MASKED" --calc="A*B" --NoDataValue=0 --type=Float32 \
-                    --co="COMPRESS=LZW" --co="TILED=YES" --co="BIGTIFF=YES"
-            fi
+            # Use Float32 for all rasters to avoid datatype conflicts in the stack
+            gdal_calc.py --overwrite -A "$RASTER" --A_band="$BAND_IDX" -B "$MASK_ALIGNED" \
+                --outfile="$OUT_MASKED" \
+                --calc="A*B" \
+                --NoDataValue=-9999 \
+                --type=Float32 \
+                --co="COMPRESS=LZW" --co="TILED=YES" --co="BIGTIFF=YES"
         else
             echo "  Found existing masked file: $OUT_MASKED"
         fi
@@ -109,8 +106,8 @@ for YEAR in {2000..2020}; do
     # Merge masked single-band files into a multi-band stack
     echo "  Creating stack: $STACK_FILE"
     VRT="${STACK_FILE%.tif}.vrt"
-    gdalbuildvrt -separate -vrtnodata 0 "$VRT" "${MASKED_LIST[@]}"
-    gdal_translate -co COMPRESS=LZW -co TILED=YES -co BIGTIFF=YES -a_nodata 0 "$VRT" "$STACK_FILE"
+    gdalbuildvrt -separate "$VRT" "${MASKED_LIST[@]}"
+    gdal_translate -co COMPRESS=LZW -co TILED=YES -co BIGTIFF=YES -ot Float32 "$VRT" "$STACK_FILE"
     rm -f "$VRT"
     echo "  ✅ Written: $STACK_FILE"
 done
@@ -118,4 +115,5 @@ done
 echo "------------------------------------------------------------"
 echo "All annual stacks written to $ANNUAL_STACK_DIR"
 echo "------------------------------------------------------------"
+
 
