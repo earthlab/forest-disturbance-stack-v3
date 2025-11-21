@@ -92,7 +92,7 @@ for YEAR in {2000..2020}; do
             # Use Float32 for all rasters to avoid datatype conflicts in the stack
             gdal_calc.py --overwrite -A "$RASTER" --A_band="$BAND_IDX" -B "$MASK_ALIGNED" \
                 --outfile="$OUT_MASKED" \
-                --calc="A*B" \
+                --calc="where(B==1, A, -9999)" \
                 --NoDataValue=-9999 \
                 --type=Float32 \
                 --co="COMPRESS=LZW" --co="TILED=YES" --co="BIGTIFF=YES"
