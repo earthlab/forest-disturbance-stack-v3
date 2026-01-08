@@ -15,7 +15,7 @@ MASK="${RESAMPLED_DIR}/forest_mask_30m_resampled.tif"
 
 # Input rasters (already subsetted & resampled; each has 21 bands for 2000..2020)
 INPUTS=(
-    "${RESAMPLED_DIR}/wildfire_id_30m_resampled.tif"
+    "${RESAMPLED_DIR}/wildfire_cbi_30m_resampled.tif"
     "${RESAMPLED_DIR}/biotic_gridded_1km_all_years_severity_30m_resampled.tif"
     "${RESAMPLED_DIR}/hd_fingerprint_30m_resampled.tif"
     "${RESAMPLED_DIR}/pdsi_annual_30m_resampled.tif"
@@ -23,7 +23,7 @@ INPUTS=(
 
 # Raster type for masking: "categorical" or "continuous"
 INPUT_TYPES=(
-    "categorical"  # wildfire_id
+    "continuous"  # wildfire_cbi
     "continuous"   # biotic
     "categorical"  # hd
     "continuous"   # pdsi
@@ -89,10 +89,19 @@ for YEAR in {2000..2020}; do
         if [ ! -f "$OUT_MASKED" ]; then
             echo "  Masking $BASENAME band $BAND_IDX"
 
-            # Use Float32 for all rasters to avoid datatype conflicts in the stack
+            # -------------------------------
+            # Wildfire-specific calc
+            # -------------------------------
+            if [[ "$BASENAME" == "wildfire_cbi_30m_resampled" ]]; then
+                CALC_EXPR="where(B==1, A, 0)"   # unburned forest = 0
+            else
+                CALC_EXPR="where(B==1, A, -9999)"  # other rasters unchanged
+            fi
+
+            # Run masking with gdal_calc.py
             gdal_calc.py --overwrite -A "$RASTER" --A_band="$BAND_IDX" -B "$MASK_ALIGNED" \
                 --outfile="$OUT_MASKED" \
-                --calc="where(B==1, A, -9999)" \
+                --calc="$CALC_EXPR" \
                 --NoDataValue=-9999 \
                 --type=Float32 \
                 --co="COMPRESS=LZW" --co="TILED=YES" --co="BIGTIFF=YES"
@@ -115,5 +124,7 @@ done
 echo "------------------------------------------------------------"
 echo "All annual stacks written to $ANNUAL_STACK_DIR"
 echo "------------------------------------------------------------"
+
+
 
 
