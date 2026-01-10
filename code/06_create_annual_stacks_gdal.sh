@@ -93,7 +93,7 @@ for YEAR in {2000..2020}; do
             # Wildfire-specific calc
             # -------------------------------
             if [[ "$BASENAME" == "wildfire_cbi_30m_resampled" ]]; then
-                CALC_EXPR="where(B==1, A, 0)"   # unburned forest = 0
+                CALC_EXPR="where(B==1, where(isnan(A), 0, A), -9999)"   # unburned forest = 0
             else
                 CALC_EXPR="where(B==1, A, -9999)"  # other rasters unchanged
             fi
