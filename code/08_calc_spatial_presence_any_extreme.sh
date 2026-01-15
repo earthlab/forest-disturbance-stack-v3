@@ -6,165 +6,105 @@ BIN_DIR="${ROOT_DIR}/data/derived/annual_stacks/binary"
 OUT_DIR="${BIN_DIR}/spatial_presence"
 TMP_DIR="${OUT_DIR}/tmp"
 
-mkdir -p "${OUT_DIR}"
-mkdir -p "${TMP_DIR}"
+mkdir -p "${OUT_DIR}" "${TMP_DIR}"
 
 YEARS=$(seq 2000 2020)
 MODES=("any" "extreme")
 
 echo "Starting spatial presence calculation..."
 
+# ---- disturbance band indices ----
+# wf = wildfire, bt = biotic, hd = hotter drought, pd = pdsi
+declare -A BAND
+BAND[wf]=1
+BAND[bt]=2
+BAND[hd]=3
+BAND[pd]=4
+
 for MODE in "${MODES[@]}"; do
-  echo "Mode: ${MODE}"
+    echo "Mode: ${MODE}"
+    MODE_OUT="${OUT_DIR}/${MODE}"
+    mkdir -p "${MODE_OUT}"
 
-  # ----------------------------------
-  # Initialize empty presence rasters
-  # ----------------------------------
+    ########################################
+    # Create VRTs for each disturbance across all years
+    ########################################
+    for DIST in wf bt hd pd; do
+        FILE_LIST=()
+        for YR in ${YEARS}; do
+            INFILE="${BIN_DIR}/annual_stack_${MODE}_${YR}.tif"
+            [[ ! -f "${INFILE}" ]] && continue
+            FILE_LIST+=("${INFILE}")
+        done
 
-  INIT_YEAR=2000
-  INIT_FILE="${BIN_DIR}/annual_stack_${MODE}_${INIT_YEAR}.tif"
+        if [ ${#FILE_LIST[@]} -eq 0 ]; then
+            echo "No files found for ${DIST} ${MODE}, skipping"
+            continue
+        fi
 
-  # Singles
-  for BAND in 1 2 3 4; do
-    gdal_calc.py -A "${INIT_FILE}" --A_band=${BAND} \
-      --calc="0" \
-      --type=Byte --NoDataValue=0 \
-      --outfile="${TMP_DIR}/single_${MODE}_${BAND}.tif"
-  done
-
-  # Doubles (pairs)
-  for PAIR in wf_bt wf_hd bt_hd wf_pd bt_pd; do
-    gdal_calc.py -A "${INIT_FILE}" --A_band=1 \
-      --calc="0" \
-      --type=Byte --NoDataValue=0 \
-      --outfile="${TMP_DIR}/${PAIR}_${MODE}.tif"
-  done
-
-  # Triples
-  for TRIP in wf_bt_hd wf_bt_pd; do
-    gdal_calc.py -A "${INIT_FILE}" --A_band=1 \
-      --calc="0" \
-      --type=Byte --NoDataValue=0 \
-      --outfile="${TMP_DIR}/${TRIP}_${MODE}.tif"
-  done
-
-  # ----------------------------------
-  # Loop through years
-  # ----------------------------------
-
-  for YR in ${YEARS}; do
-    echo "  Processing ${YR}"
-
-    INFILE="${BIN_DIR}/annual_stack_${MODE}_${YR}.tif"
-
-    # Extract bands
-    WF="${TMP_DIR}/wf_${YR}.tif"
-    BT="${TMP_DIR}/bt_${YR}.tif"
-    HD="${TMP_DIR}/hd_${YR}.tif"
-    PD="${TMP_DIR}/pd_${YR}.tif"
-
-    gdal_translate -b 1 "${INFILE}" "${WF}"
-    gdal_translate -b 2 "${INFILE}" "${BT}"
-    gdal_translate -b 3 "${INFILE}" "${HD}"
-    gdal_translate -b 4 "${INFILE}" "${PD}"
-
-    # ---- Singles (OR over years)
-    for BAND in wf bt hd pd; do
-      gdal_calc.py \
-        -A "${TMP_DIR}/single_${MODE}_$(
-          [[ ${BAND} == wf ]] && echo 1 ||
-          [[ ${BAND} == bt ]] && echo 2 ||
-          [[ ${BAND} == hd ]] && echo 3 ||
-          echo 4
-        ).tif" \
-        -B "${TMP_DIR}/${BAND}_${YR}.tif" \
-        --calc="maximum(A,B)" \
-        --type=Byte --NoDataValue=0 \
-        --outfile="${TMP_DIR}/tmp_single.tif"
-
-      mv "${TMP_DIR}/tmp_single.tif" \
-         "${TMP_DIR}/single_${MODE}_$(
-          [[ ${BAND} == wf ]] && echo 1 ||
-          [[ ${BAND} == bt ]] && echo 2 ||
-          [[ ${BAND} == hd ]] && echo 3 ||
-          echo 4
-        ).tif"
+        VRT_FILE="${TMP_DIR}/${DIST}_${MODE}.vrt"
+        echo "Building VRT for ${DIST}..."
+        gdalbuildvrt -separate -b ${BAND[$DIST]} "${VRT_FILE}" "${FILE_LIST[@]}"
     done
 
-    # ---- Doubles (AND per year, OR over years)
+    ########################################
+    # Compute single disturbance presence (any year)
+    ########################################
+    for DIST in wf bt hd pd; do
+        VRT_FILE="${TMP_DIR}/${DIST}_${MODE}.vrt"
+        OUTFILE="${MODE_OUT}/${DIST}_${MODE}_presence.tif"
+        echo "Computing presence raster: ${DIST}"
+        gdal_calc.py \
+            -A "${VRT_FILE}" \
+            --calc="numpy.max(A, axis=0)" \
+            --type=Byte \
+            --NoDataValue=0 \
+            --outfile="${OUTFILE}" \
+            --overwrite \
+            --co="COMPRESS=DEFLATE" --co="TILED=YES"
+    done
 
-    gdal_calc.py -A "${WF}" -B "${BT}" --calc="A*B" --type=Byte \
-      --outfile="${TMP_DIR}/tmp_pair.tif"
-    gdal_calc.py -A "${TMP_DIR}/wf_bt_${MODE}.tif" -B "${TMP_DIR}/tmp_pair.tif" \
-      --calc="maximum(A,B)" --type=Byte \
-      --outfile="${TMP_DIR}/wf_bt_${MODE}.tif"
+    ########################################
+    # Compute double combinations 
+    ########################################
+    PAIRS=("wf,bt" "wf,hd" "wf,pd" "bt,hd" "bt,pd")
+    for PAIR in "${PAIRS[@]}"; do
+        IFS=',' read -r D1 D2 <<< "$PAIR"
+        OUTFILE="${MODE_OUT}/${D1}_${D2}_${MODE}_presence.tif"
+        echo "Computing double combination: ${D1}_${D2}"
+        gdal_calc.py \
+            -A "${MODE_OUT}/${D1}_${MODE}_presence.tif" \
+            -B "${MODE_OUT}/${D2}_${MODE}_presence.tif" \
+            --calc="A*B" \
+            --type=Byte \
+            --NoDataValue=0 \
+            --outfile="${OUTFILE}" \
+            --overwrite \
+            --co="COMPRESS=DEFLATE" --co="TILED=YES"
+    done
 
-    gdal_calc.py -A "${WF}" -B "${HD}" --calc="A*B" --type=Byte \
-      --outfile="${TMP_DIR}/tmp_pair.tif"
-    gdal_calc.py -A "${TMP_DIR}/wf_hd_${MODE}.tif" -B "${TMP_DIR}/tmp_pair.tif" \
-      --calc="maximum(A,B)" --type=Byte \
-      --outfile="${TMP_DIR}/wf_hd_${MODE}.tif"
-
-    gdal_calc.py -A "${BT}" -B "${HD}" --calc="A*B" --type=Byte \
-      --outfile="${TMP_DIR}/tmp_pair.tif"
-    gdal_calc.py -A "${TMP_DIR}/bt_hd_${MODE}.tif" -B "${TMP_DIR}/tmp_pair.tif" \
-      --calc="maximum(A,B)" --type=Byte \
-      --outfile="${TMP_DIR}/bt_hd_${MODE}.tif"
-
-    gdal_calc.py -A "${WF}" -B "${PD}" --calc="A*B" --type=Byte \
-      --outfile="${TMP_DIR}/tmp_pair.tif"
-    gdal_calc.py -A "${TMP_DIR}/wf_pd_${MODE}.tif" -B "${TMP_DIR}/tmp_pair.tif" \
-      --calc="maximum(A,B)" --type=Byte \
-      --outfile="${TMP_DIR}/wf_pd_${MODE}.tif"
-
-    gdal_calc.py -A "${BT}" -B "${PD}" --calc="A*B" --type=Byte \
-      --outfile="${TMP_DIR}/tmp_pair.tif"
-    gdal_calc.py -A "${TMP_DIR}/bt_pd_${MODE}.tif" -B "${TMP_DIR}/tmp_pair.tif" \
-      --calc="maximum(A,B)" --type=Byte \
-      --outfile="${TMP_DIR}/bt_pd_${MODE}.tif"
-
-    # ---- Triples
-
-    gdal_calc.py -A "${WF}" -B "${BT}" -C "${HD}" \
-      --calc="A*B*C" --type=Byte \
-      --outfile="${TMP_DIR}/tmp_trip.tif"
-    gdal_calc.py -A "${TMP_DIR}/wf_bt_hd_${MODE}.tif" -B "${TMP_DIR}/tmp_trip.tif" \
-      --calc="maximum(A,B)" --type=Byte \
-      --outfile="${TMP_DIR}/wf_bt_hd_${MODE}.tif"
-
-    gdal_calc.py -A "${WF}" -B "${BT}" -C "${PD}" \
-      --calc="A*B*C" --type=Byte \
-      --outfile="${TMP_DIR}/tmp_trip.tif"
-    gdal_calc.py -A "${TMP_DIR}/wf_bt_pd_${MODE}.tif" -B "${TMP_DIR}/tmp_trip.tif" \
-      --calc="maximum(A,B)" --type=Byte \
-      --outfile="${TMP_DIR}/wf_bt_pd_${MODE}.tif"
-
-    rm -f "${WF}" "${BT}" "${HD}" "${PD}" \
-          "${TMP_DIR}/tmp_pair.tif" "${TMP_DIR}/tmp_trip.tif"
-
-  done
-
-  # ----------------------------------
-  # Finalize outputs
-  # ----------------------------------
-
-  mv "${TMP_DIR}/single_${MODE}_1.tif" "${OUT_DIR}/wildfire_${MODE}_presence.tif"
-  mv "${TMP_DIR}/single_${MODE}_2.tif" "${OUT_DIR}/biotic_${MODE}_presence.tif"
-  mv "${TMP_DIR}/single_${MODE}_3.tif" "${OUT_DIR}/hd_${MODE}_presence.tif"
-  mv "${TMP_DIR}/single_${MODE}_4.tif" "${OUT_DIR}/pdsi_${MODE}_presence.tif"
-
-  mv "${TMP_DIR}/wf_bt_${MODE}.tif"     "${OUT_DIR}/wf_bt_${MODE}_presence.tif"
-  mv "${TMP_DIR}/wf_hd_${MODE}.tif"     "${OUT_DIR}/wf_hd_${MODE}_presence.tif"
-  mv "${TMP_DIR}/bt_hd_${MODE}.tif"     "${OUT_DIR}/bt_hd_${MODE}_presence.tif"
-  mv "${TMP_DIR}/wf_pd_${MODE}.tif"     "${OUT_DIR}/wf_pd_${MODE}_presence.tif"
-  mv "${TMP_DIR}/bt_pd_${MODE}.tif"     "${OUT_DIR}/bt_pd_${MODE}_presence.tif"
-
-  mv "${TMP_DIR}/wf_bt_hd_${MODE}.tif"  "${OUT_DIR}/wf_bt_hd_${MODE}_presence.tif"
-  mv "${TMP_DIR}/wf_bt_pd_${MODE}.tif"  "${OUT_DIR}/wf_bt_pd_${MODE}_presence.tif"
+    ########################################
+    # Compute triple combinations 
+    ########################################
+    TRIPLES=("wf,bt,hd" "wf,bt,pd")
+    for TRIP in "${TRIPLES[@]}"; do
+        IFS=',' read -r D1 D2 D3 <<< "$TRIP"
+        OUTFILE="${MODE_OUT}/${D1}_${D2}_${D3}_${MODE}_presence.tif"
+        echo "Computing triple combination: ${D1}_${D2}_${D3}"
+        gdal_calc.py \
+            -A "${MODE_OUT}/${D1}_${MODE}_presence.tif" \
+            -B "${MODE_OUT}/${D2}_${MODE}_presence.tif" \
+            -C "${MODE_OUT}/${D3}_${MODE}_presence.tif" \
+            --calc="A*B*C" \
+            --type=Byte \
+            --NoDataValue=0 \
+            --outfile="${OUTFILE}" \
+            --overwrite \
+            --co="COMPRESS=DEFLATE" --co="TILED=YES"
+    done
 
 done
 
 rm -rf "${TMP_DIR}"
-
 echo "✅ Spatial presence rasters created successfully."
 
