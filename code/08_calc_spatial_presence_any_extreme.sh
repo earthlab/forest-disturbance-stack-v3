@@ -14,12 +14,15 @@ MODES=("any" "extreme")
 echo "Starting spatial presence calculation..."
 
 # ---- disturbance band indices ----
-# wf = wildfire, bt = biotic, hd = hotter drought, pd = pdsi
 declare -A BAND
 BAND[wf]=1
 BAND[bt]=2
 BAND[hd]=3
 BAND[pd]=4
+
+# ---- define double and triple combinations ----
+PAIRS=("wf,bt" "wf,hd" "wf,pd" "bt,hd" "bt,pd")
+TRIPLES=("wf,bt,hd" "wf,bt,pd")
 
 for MODE in "${MODES[@]}"; do
     echo "Mode: ${MODE}"
@@ -44,7 +47,8 @@ for MODE in "${MODES[@]}"; do
 
         VRT_FILE="${TMP_DIR}/${DIST}_${MODE}.vrt"
         echo "Building VRT for ${DIST}..."
-        gdalbuildvrt -separate -b ${BAND[$DIST]} "${VRT_FILE}" "${FILE_LIST[@]}"
+        # Explicitly pick only the band for this disturbance
+        gdalbuildvrt -separate $(for f in "${FILE_LIST[@]}"; do echo -n "-b ${BAND[$DIST]} $f "; done) "${VRT_FILE}"
     done
 
     ########################################
@@ -53,10 +57,10 @@ for MODE in "${MODES[@]}"; do
     for DIST in wf bt hd pd; do
         VRT_FILE="${TMP_DIR}/${DIST}_${MODE}.vrt"
         OUTFILE="${MODE_OUT}/${DIST}_${MODE}_presence.tif"
-        echo "Computing presence raster: ${DIST}"
+        echo "Computing single disturbance raster: ${DIST}"
         gdal_calc.py \
             -A "${VRT_FILE}" \
-            --calc="numpy.max(A, axis=0)" \
+            --calc="numpy.any(A>0, axis=0).astype(numpy.uint8)" \
             --type=Byte \
             --NoDataValue=0 \
             --outfile="${OUTFILE}" \
@@ -65,9 +69,8 @@ for MODE in "${MODES[@]}"; do
     done
 
     ########################################
-    # Compute double combinations 
+    # Compute double combinations (logical OR)
     ########################################
-    PAIRS=("wf,bt" "wf,hd" "wf,pd" "bt,hd" "bt,pd")
     for PAIR in "${PAIRS[@]}"; do
         IFS=',' read -r D1 D2 <<< "$PAIR"
         OUTFILE="${MODE_OUT}/${D1}_${D2}_${MODE}_presence.tif"
@@ -75,7 +78,7 @@ for MODE in "${MODES[@]}"; do
         gdal_calc.py \
             -A "${MODE_OUT}/${D1}_${MODE}_presence.tif" \
             -B "${MODE_OUT}/${D2}_${MODE}_presence.tif" \
-            --calc="A*B" \
+            --calc="((A>0) | (B>0)).astype(numpy.uint8)" \
             --type=Byte \
             --NoDataValue=0 \
             --outfile="${OUTFILE}" \
@@ -84,9 +87,8 @@ for MODE in "${MODES[@]}"; do
     done
 
     ########################################
-    # Compute triple combinations 
+    # Compute triple combinations (logical OR)
     ########################################
-    TRIPLES=("wf,bt,hd" "wf,bt,pd")
     for TRIP in "${TRIPLES[@]}"; do
         IFS=',' read -r D1 D2 D3 <<< "$TRIP"
         OUTFILE="${MODE_OUT}/${D1}_${D2}_${D3}_${MODE}_presence.tif"
@@ -95,7 +97,7 @@ for MODE in "${MODES[@]}"; do
             -A "${MODE_OUT}/${D1}_${MODE}_presence.tif" \
             -B "${MODE_OUT}/${D2}_${MODE}_presence.tif" \
             -C "${MODE_OUT}/${D3}_${MODE}_presence.tif" \
-            --calc="A*B*C" \
+            --calc="((A>0) | (B>0) | (C>0)).astype(numpy.uint8)" \
             --type=Byte \
             --NoDataValue=0 \
             --outfile="${OUTFILE}" \
@@ -106,5 +108,5 @@ for MODE in "${MODES[@]}"; do
 done
 
 rm -rf "${TMP_DIR}"
-echo "✅ Spatial presence rasters created successfully."
+echo "✅ Spatial presence rasters (any + extreme) created successfully."
 
