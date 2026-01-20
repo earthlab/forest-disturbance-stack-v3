@@ -1,6 +1,11 @@
 #!/bin/bash
 set -euo pipefail
 
+echo "==============================================="
+echo " Spatial presence (ANY vs EXTREME, 2000–2020)"
+echo " Project: forest-disturbance-stack-v3"
+echo "==============================================="
+
 ROOT_DIR="$(pwd)"
 BIN_DIR="${ROOT_DIR}/data/derived/annual_stacks/binary"
 OUT_DIR="${BIN_DIR}/spatial_presence"
@@ -11,102 +16,120 @@ mkdir -p "${OUT_DIR}" "${TMP_DIR}"
 YEARS=$(seq 2000 2020)
 MODES=("any" "extreme")
 
-echo "Starting spatial presence calculation..."
-
-# ---- disturbance band indices ----
+# Annual stack band order
 declare -A BAND
 BAND[wf]=1
 BAND[bt]=2
 BAND[hd]=3
 BAND[pd]=4
 
-# ---- define double and triple combinations ----
-PAIRS=("wf,bt" "wf,hd" "wf,pd" "bt,hd" "bt,pd")
-TRIPLES=("wf,bt,hd" "wf,bt,pd")
+echo "Starting spatial presence calculation..."
 
 for MODE in "${MODES[@]}"; do
+    echo "-----------------------------------------------"
     echo "Mode: ${MODE}"
+    echo "-----------------------------------------------"
+
     MODE_OUT="${OUT_DIR}/${MODE}"
     mkdir -p "${MODE_OUT}"
 
-    ########################################
-    # Create VRTs for each disturbance across all years
-    ########################################
     for DIST in wf bt hd pd; do
-        FILE_LIST=()
+        echo "Processing ${DIST} (${MODE})"
+
+        DIST_TMP="${TMP_DIR}/${DIST}_${MODE}"
+        mkdir -p "${DIST_TMP}"
+
+        YEAR_BANDS=()
+
+        # ---------------------------------------------
+        # Extract correct band for each year
+        # ---------------------------------------------
         for YR in ${YEARS}; do
             INFILE="${BIN_DIR}/annual_stack_${MODE}_${YR}.tif"
             [[ ! -f "${INFILE}" ]] && continue
-            FILE_LIST+=("${INFILE}")
+
+            OUTBAND="${DIST_TMP}/${DIST}_${MODE}_${YR}.tif"
+
+            gdal_translate \
+                -b "${BAND[$DIST]}" \
+                -of GTiff \
+                -co COMPRESS=DEFLATE \
+                -co TILED=YES \
+                "${INFILE}" \
+                "${OUTBAND}"
+
+            YEAR_BANDS+=("${OUTBAND}")
         done
 
-        if [ ${#FILE_LIST[@]} -eq 0 ]; then
-            echo "No files found for ${DIST} ${MODE}, skipping"
-            continue
-        fi
+        [[ ${#YEAR_BANDS[@]} -eq 0 ]] && continue
 
+        # ---------------------------------------------
+        # Build VRT: one band per year
+        # ---------------------------------------------
         VRT_FILE="${TMP_DIR}/${DIST}_${MODE}.vrt"
-        echo "Building VRT for ${DIST}..."
-        # Explicitly pick only the band for this disturbance
-        gdalbuildvrt -separate $(for f in "${FILE_LIST[@]}"; do echo -n "-b ${BAND[$DIST]} $f "; done) "${VRT_FILE}"
-    done
+        gdalbuildvrt -separate "${VRT_FILE}" "${YEAR_BANDS[@]}"
 
-    ########################################
-    # Compute single disturbance presence (any year)
-    ########################################
-    for DIST in wf bt hd pd; do
-        VRT_FILE="${TMP_DIR}/${DIST}_${MODE}.vrt"
+        # ---------------------------------------------
+        # Collapse across years: ANY occurrence
+        # ---------------------------------------------
         OUTFILE="${MODE_OUT}/${DIST}_${MODE}_presence.tif"
-        echo "Computing single disturbance raster: ${DIST}"
+
         gdal_calc.py \
             -A "${VRT_FILE}" \
-            --calc="numpy.any(A>0, axis=0).astype(numpy.uint8)" \
+            --calc="numpy.any(A == 1, axis=0).astype(numpy.uint8)" \
             --type=Byte \
             --NoDataValue=0 \
             --outfile="${OUTFILE}" \
             --overwrite \
-            --co="COMPRESS=DEFLATE" --co="TILED=YES"
+            --co="COMPRESS=DEFLATE" \
+            --co="TILED=YES"
     done
 
-    ########################################
-    # Compute double combinations (logical OR)
-    ########################################
+    # ---------------------------------------------
+    # Double combinations
+    # ---------------------------------------------
+    PAIRS=("wf,bt" "wf,hd" "wf,pd" "bt,hd" "bt,pd")
     for PAIR in "${PAIRS[@]}"; do
-        IFS=',' read -r D1 D2 <<< "$PAIR"
+        IFS=',' read -r D1 D2 <<< "${PAIR}"
         OUTFILE="${MODE_OUT}/${D1}_${D2}_${MODE}_presence.tif"
-        echo "Computing double combination: ${D1}_${D2}"
+
         gdal_calc.py \
             -A "${MODE_OUT}/${D1}_${MODE}_presence.tif" \
             -B "${MODE_OUT}/${D2}_${MODE}_presence.tif" \
-            --calc="((A>0) | (B>0)).astype(numpy.uint8)" \
+            --calc="(A == 1) * (B == 1)" \
             --type=Byte \
             --NoDataValue=0 \
             --outfile="${OUTFILE}" \
             --overwrite \
-            --co="COMPRESS=DEFLATE" --co="TILED=YES"
+            --co="COMPRESS=DEFLATE" \
+            --co="TILED=YES"
     done
 
-    ########################################
-    # Compute triple combinations (logical OR)
-    ########################################
+    # ---------------------------------------------
+    # Triple combinations
+    # ---------------------------------------------
+    TRIPLES=("wf,bt,hd" "wf,bt,pd")
     for TRIP in "${TRIPLES[@]}"; do
-        IFS=',' read -r D1 D2 D3 <<< "$TRIP"
+        IFS=',' read -r D1 D2 D3 <<< "${TRIP}"
         OUTFILE="${MODE_OUT}/${D1}_${D2}_${D3}_${MODE}_presence.tif"
-        echo "Computing triple combination: ${D1}_${D2}_${D3}"
+
         gdal_calc.py \
             -A "${MODE_OUT}/${D1}_${MODE}_presence.tif" \
             -B "${MODE_OUT}/${D2}_${MODE}_presence.tif" \
             -C "${MODE_OUT}/${D3}_${MODE}_presence.tif" \
-            --calc="((A>0) | (B>0) | (C>0)).astype(numpy.uint8)" \
+            --calc="(A == 1) * (B == 1) * (C == 1)" \
             --type=Byte \
             --NoDataValue=0 \
             --outfile="${OUTFILE}" \
             --overwrite \
-            --co="COMPRESS=DEFLATE" --co="TILED=YES"
+            --co="COMPRESS=DEFLATE" \
+            --co="TILED=YES"
     done
-
 done
 
 rm -rf "${TMP_DIR}"
-echo "✅ Spatial presence rasters (any + extreme) created successfully."
+
+echo "==============================================="
+echo " ✅ Spatial presence rasters created correctly"
+echo "==============================================="
 
