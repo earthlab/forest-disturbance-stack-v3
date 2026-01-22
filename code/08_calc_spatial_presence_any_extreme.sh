@@ -33,6 +33,9 @@ for MODE in "${MODES[@]}"; do
     MODE_OUT="${OUT_DIR}/${MODE}"
     mkdir -p "${MODE_OUT}"
 
+    # -----------------------------
+    # Singles (wf, bt, hd, pd)
+    # -----------------------------
     for DIST in wf bt hd pd; do
         echo "Processing ${DIST} (${MODE})"
 
@@ -41,9 +44,7 @@ for MODE in "${MODES[@]}"; do
 
         YEAR_BANDS=()
 
-        # ---------------------------------------------
-        # Extract correct band for each year
-        # ---------------------------------------------
+        # Extract the band for each year
         for YR in ${YEARS}; do
             INFILE="${BIN_DIR}/annual_stack_${MODE}_${YR}.tif"
             [[ ! -f "${INFILE}" ]] && continue
@@ -63,31 +64,27 @@ for MODE in "${MODES[@]}"; do
 
         [[ ${#YEAR_BANDS[@]} -eq 0 ]] && continue
 
-        # ---------------------------------------------
-        # Build VRT: one band per year
-        # ---------------------------------------------
+        # Build VRT with one band per year
         VRT_FILE="${TMP_DIR}/${DIST}_${MODE}.vrt"
         gdalbuildvrt -separate "${VRT_FILE}" "${YEAR_BANDS[@]}"
 
-        # ---------------------------------------------
-        # Collapse across years: ANY occurrence
-        # ---------------------------------------------
+        # Collapse across years (ANY occurrence)
         OUTFILE="${MODE_OUT}/${DIST}_${MODE}_presence.tif"
 
         gdal_calc.py \
             -A "${VRT_FILE}" \
-            --calc="numpy.any(A == 1, axis=0).astype(numpy.uint8)" \
+            --calc="numpy.where(numpy.any(A == 1, axis=0), 1, 0).astype(numpy.uint8)" \
             --type=Byte \
-            --NoDataValue=0 \
+            --NoDataValue=-9999 \
             --outfile="${OUTFILE}" \
             --overwrite \
             --co="COMPRESS=DEFLATE" \
             --co="TILED=YES"
     done
 
-    # ---------------------------------------------
+    # -----------------------------
     # Double combinations
-    # ---------------------------------------------
+    # -----------------------------
     PAIRS=("wf,bt" "wf,hd" "wf,pd" "bt,hd" "bt,pd")
     for PAIR in "${PAIRS[@]}"; do
         IFS=',' read -r D1 D2 <<< "${PAIR}"
@@ -96,18 +93,18 @@ for MODE in "${MODES[@]}"; do
         gdal_calc.py \
             -A "${MODE_OUT}/${D1}_${MODE}_presence.tif" \
             -B "${MODE_OUT}/${D2}_${MODE}_presence.tif" \
-            --calc="(A == 1) * (B == 1)" \
+            --calc="numpy.where((A == 1) & (B == 1), 1, 0).astype(numpy.uint8)" \
             --type=Byte \
-            --NoDataValue=0 \
+            --NoDataValue=-9999 \
             --outfile="${OUTFILE}" \
             --overwrite \
             --co="COMPRESS=DEFLATE" \
             --co="TILED=YES"
     done
 
-    # ---------------------------------------------
+    # -----------------------------
     # Triple combinations
-    # ---------------------------------------------
+    # -----------------------------
     TRIPLES=("wf,bt,hd" "wf,bt,pd")
     for TRIP in "${TRIPLES[@]}"; do
         IFS=',' read -r D1 D2 D3 <<< "${TRIP}"
@@ -117,9 +114,9 @@ for MODE in "${MODES[@]}"; do
             -A "${MODE_OUT}/${D1}_${MODE}_presence.tif" \
             -B "${MODE_OUT}/${D2}_${MODE}_presence.tif" \
             -C "${MODE_OUT}/${D3}_${MODE}_presence.tif" \
-            --calc="(A == 1) * (B == 1) * (C == 1)" \
+            --calc="numpy.where((A == 1) & (B == 1) & (C == 1), 1, 0).astype(numpy.uint8)" \
             --type=Byte \
-            --NoDataValue=0 \
+            --NoDataValue=-9999 \
             --outfile="${OUTFILE}" \
             --overwrite \
             --co="COMPRESS=DEFLATE" \
@@ -127,6 +124,7 @@ for MODE in "${MODES[@]}"; do
     done
 done
 
+# Cleanup
 rm -rf "${TMP_DIR}"
 
 echo "==============================================="
