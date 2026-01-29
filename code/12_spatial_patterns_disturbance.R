@@ -12,7 +12,7 @@ setwd("/home/jovyan/data-store/forest-disturbance-stack-v3")
 here::i_am("README.md")
 
 # Packages
-packages <- c("here", "terra", "sf", "dplyr", "ggplot2", "patchwork", "tidyr")
+packages <- c("here", "terra", "sf", "dplyr", "ggplot2", "patchwork", "tidyr", "ragg")
 installed <- packages %in% installed.packages()[, "Package"]
 if (any(!installed)) install.packages(packages[!installed])
 
@@ -23,6 +23,7 @@ library(dplyr)
 library(ggplot2)
 library(patchwork)
 library(tidyr)
+library(ragg)
 
 
 terraOptions(
@@ -90,7 +91,7 @@ raster_paths <- list(
 forest <- rast(forest_mask)
 
 # Aggregation factor for faster plotting
-agg_factor <- 2
+agg_factor <- 5
 
 # Aggregate forest mask
 forest_ds <- aggregate(forest, fact = agg_factor, fun = max)  # small enough for plotting
@@ -108,6 +109,11 @@ west_states <- c("California", "Oregon", "Washington", "Idaho", "Nevada",
                  "Utah", "Arizona", "Montana", "Wyoming", "Colorado", "New Mexico")
 eco <- eco %>% mutate(west_flag = ifelse(STATE_NAME %in% west_states, 1, 0))
 west_eco <- eco %>% filter(west_flag == 1)
+
+# Dissolve ecoregions (remove state boundaries)
+west_eco <- west_eco %>%
+  group_by(US_L3CODE) %>%     # or group_by(L3_KEY)
+  summarise(geometry = st_union(geometry), .groups = "drop")
 
 # Bounding box for plotting
 west_extent <- st_bbox(west_eco)
@@ -132,13 +138,15 @@ raster_dfs <- lapply(raster_paths, raster_to_df)
 # ===========================================================
 base_map <- list(
   geom_raster(data = df_forest, aes(x = x, y = y),
-              fill = "lightgray", alpha = 0.4),
-  geom_sf(data = west_eco, fill = NA, color = "black", size = 0.15),
+              fill = "grey88", alpha = 1),
   coord_sf(
     xlim = c(west_extent["xmin"], west_extent["xmax"]),
     ylim = c(west_extent["ymin"], west_extent["ymax"])
   ),
-  theme_void()
+  theme_void(),
+  theme(
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background  = element_rect(fill = "white", color = NA))
 )
 
 
@@ -147,38 +155,125 @@ base_map <- list(
 # ===========================================================
 p_wf <- ggplot() +
   base_map +
-  geom_tile(data = raster_dfs$wf_any, aes(x = x, y = y), fill = "orangered", alpha = 0.7) +
-  geom_tile(data = raster_dfs$wf_extr, aes(x = x, y = y), fill = "orangered4", alpha = 0.9) +
+  geom_raster(data = raster_dfs$wf_any, aes(x = x, y = y), fill = "orangered1", alpha = 0.7) +
+  geom_raster(data = raster_dfs$wf_extr, aes(x = x, y = y), fill = "orangered4", alpha = 0.9) +
+  geom_sf(data = west_eco, fill = NA, color = "black", size = 0.15) +
   labs(title = "wf")
 
 p_bt <- ggplot() +
   base_map +
-  geom_tile(data = raster_dfs$bt_any, aes(x = x, y = y), fill = "tan", alpha = 0.7) +
-  geom_tile(data = raster_dfs$bt_extr, aes(x = x, y = y), fill = "tan4", alpha = 0.9) +
+  geom_raster(data = raster_dfs$bt_any, aes(x = x, y = y), fill = "khaki1", alpha = 0.7) +
+  geom_raster(data = raster_dfs$bt_extr, aes(x = x, y = y), fill = "khaki4", alpha = 0.9) +
+  geom_sf(data = west_eco, fill = NA, color = "black", size = 0.15) +
   labs(title = "bt")
 
 p_hd <- ggplot() +
   base_map +
-  geom_tile(data = raster_dfs$hd_any, aes(x = x, y = y), fill = "coral", alpha = 0.7) +
-  geom_tile(data = raster_dfs$hd_extr, aes(x = x, y = y), fill = "coral4", alpha = 0.9) +
+  geom_raster(data = raster_dfs$hd_any, aes(x = x, y = y), fill = "dodgerblue1", alpha = 0.7) +
+  geom_raster(data = raster_dfs$hd_extr, aes(x = x, y = y), fill = "dodgerblue4", alpha = 0.9) +
+  geom_sf(data = west_eco, fill = NA, color = "black", size = 0.15) +
   labs(title = "hd")
 
 p_combo <- ggplot() +
   base_map +
-  geom_tile(data = raster_dfs$wf_bt_hd_any, aes(x = x, y = y), fill = "royalblue", alpha = 0.7) +
-  geom_tile(data = raster_dfs$wf_bt_hd_extr, aes(x = x, y = y), fill = "royalblue4", alpha = 0.9) +
+  geom_raster(data = raster_dfs$wf_bt_hd_any, aes(x = x, y = y), fill = "darkorchid1", alpha = 0.7) +
+  geom_raster(data = raster_dfs$wf_bt_hd_extr, aes(x = x, y = y), fill = "darkorchid4", alpha = 0.9) +
+  geom_sf(data = west_eco, fill = NA, color = "black", size = 0.15) +
   labs(title = "wf, bt, hd")
 
 # Combine panels
-four_panel <- p_wf | p_bt | p_hd | p_combo +
-  plot_annotation(
-    title = "Spatial Presence of Disturbance (2000–2020)",
-    theme = theme(plot.title = element_text(size = 12, face = "bold"))
-  )
+four_panel <- p_wf | p_bt | p_hd | p_combo 
 
 # Display
 four_panel
 
+# Save
+ggsave(
+  filename = "figs/spatial_patterns/spatial_patterns_four_panel.png",
+  plot     = four_panel,
+  width    = 6,        # inches (adjust as needed)
+  height   = 4,         # inches (single-row layout)
+  dpi      = 300,
+  units    = "in",
+  bg       = "white"
+)
+
+# ===========================================================
+# Eight-panel plot
+# ===========================================================
+p_wf_any <- ggplot() +
+  base_map +
+  geom_raster(data = raster_dfs$wf_any, aes(x = x, y = y), fill = "orangered1", alpha = 0.7) +
+  geom_sf(data = west_eco, fill = NA, color = "black", size = 0.1) +
+  labs(title = "wf")
+
+p_bt_any <- ggplot() +
+  base_map +
+  geom_raster(data = raster_dfs$bt_any, aes(x = x, y = y), fill = "khaki1", alpha = 0.7) +
+  geom_sf(data = west_eco, fill = NA, color = "black", size = 0.1) +
+  labs(title = "bt")
+
+p_hd_any <- ggplot() +
+  base_map +
+  geom_raster(data = raster_dfs$hd_any, aes(x = x, y = y), fill = "dodgerblue1", alpha = 0.7) +
+  geom_sf(data = west_eco, fill = NA, color = "black", size = 0.1) +
+  labs(title = "hd")
+
+p_combo_any <- ggplot() +
+  base_map +
+  geom_raster(data = raster_dfs$wf_hd_any, aes(x = x, y = y), fill = "firebrick1", alpha = 0.7) +
+  geom_raster(data = raster_dfs$bt_hd_any, aes(x = x, y = y), fill = "darkolivegreen1", alpha = 0.7) +
+  geom_raster(data = raster_dfs$wf_bt_any, aes(x = x, y = y), fill = "darkorchid1", alpha = 0.7) +
+  geom_raster(data = raster_dfs$wf_bt_hd_any, aes(x = x, y = y), fill = "darkgoldenrod1", alpha = 0.7) +
+  geom_sf(data = west_eco, fill = NA, color = "black", size = 0.1) +
+  labs(title = "int")
+
+
+p_wf_extr <- ggplot() +
+  base_map +
+  geom_raster(data = raster_dfs$wf_extr, aes(x = x, y = y), fill = "orangered4", alpha = 0.7) +
+  geom_sf(data = west_eco, fill = NA, color = "black", size = 0.1)
+  
+p_bt_extr <- ggplot() +
+  base_map +
+  geom_raster(data = raster_dfs$bt_extr, aes(x = x, y = y), fill = "khaki4", alpha = 0.7) +
+  geom_sf(data = west_eco, fill = NA, color = "black", size = 0.1)
+  
+p_hd_extr <- ggplot() +
+  base_map +
+  geom_raster(data = raster_dfs$hd_extr, aes(x = x, y = y), fill = "dodgerblue4", alpha = 0.7) +
+  geom_sf(data = west_eco, fill = NA, color = "black", size = 0.1)
+  
+p_combo_extr <- ggplot() +
+  base_map +
+  geom_raster(data = raster_dfs$wf_hd_extr, aes(x = x, y = y), fill = "firebrick4", alpha = 0.7) +
+  geom_raster(data = raster_dfs$bt_hd_extr, aes(x = x, y = y), fill = "darkolivegreen4", alpha = 0.7) +
+  geom_raster(data = raster_dfs$wf_bt_extr, aes(x = x, y = y), fill = "darkorchid4", alpha = 0.7) +
+  geom_raster(data = raster_dfs$wf_bt_hd_extr, aes(x = x, y = y), fill = "darkgoldenrod4", alpha = 0.7) +
+  geom_sf(data = west_eco, fill = NA, color = "black", size = 0.1)
+  
+
+
+
+# Combine panels
+eight_panel <- (p_wf_any | p_bt_any | p_hd_any | p_combo_any) / 
+               (p_wf_extr | p_bt_extr | p_hd_extr | p_combo_extr) +
+  theme(plot.margin = margin(.1, 1, .1, 1))
+  
+  
+# Display
+eight_panel
+  
+# Save
+ggsave(
+  filename = "figs/spatial_patterns/spatial_patterns_eight_panel.png",
+  plot     = eight_panel,
+  width    = 6,        # inches (adjust as needed)
+  height   = 8,         # inches (single-row layout)
+  dpi      = 300,
+  units    = "in",
+  bg       = "white"
+)
 
 
 
@@ -207,21 +302,15 @@ four_panel
 
 
 
-
-
-
-
-
-
-
-
-
+forest_mask <- rast("data/derived/resampled/forest_mask_30m_resampled.tif")
 
 wf_any = rast("data/derived/annual_stacks/binary/spatial_presence/any/wf_any_presence.tif")
 bt_any = rast("data/derived/annual_stacks/binary/spatial_presence/any/bt_any_presence.tif")
 hd_any = rast("data/derived/annual_stacks/binary/spatial_presence/any/hd_any_presence.tif")
 
-
+wf_extr = rast("data/derived/annual_stacks/binary/spatial_presence/extreme/wf_extreme_presence.tif")
+bt_extr = rast("data/derived/annual_stacks/binary/spatial_presence/extreme/bt_extreme_presence.tif")
+hd_extr = rast("data/derived/annual_stacks/binary/spatial_presence/extreme/hd_extreme_presence.tif")
 
 
 # Quick base plot for each raster
@@ -237,9 +326,9 @@ plot(hd_any, main="Hotter Drought Presence (Any)")
 # Forest mask
 plot(forest_mask, col=gray.colors(10, start=0.9, end=0.3), legend=FALSE)
 # Any
-plot(wf_any, col=adjustcolor("red", alpha.f=0.5), add=TRUE)
+plot(wf_any, col=adjustcolor("orange", alpha.f=0.5), add=TRUE, legend=FALSE)
 # Extreme
-
+plot(wf_extr, col=adjustcolor("orangered2", alpha.f=0.7), add=TRUE, legend=FALSE)
 
 
 
@@ -247,9 +336,7 @@ plot(bt_any, col=adjustcolor("green", alpha.f=0.5), add=TRUE)
 
 plot(hd_any, col=adjustcolor("orange", alpha.f=0.5), add=TRUE)
 
-wf_extr = "data/derived/annual_stacks/binary/spatial_presence/extreme/wf_extreme_presence.tif",
-bt_extr = "data/derived/annual_stacks/binary/spatial_presence/extreme/bt_extreme_presence.tif",
-hd_extr = "data/derived/annual_stacks/binary/spatial_presence/extreme/hd_extreme_presence.tif",
+
 ### Plot with ggplot
 
 # Downsample by factor of 100 (adjust as needed)
@@ -292,84 +379,5 @@ pd_ds <- aggregate(pd_pa, fact=100, fun=max)
 
 ################################################################################
 
-### Load spatial presence/absence rasters, forest mask, ecoregions
-
-# Directory
-pa_dir <- "data/derived/annual_stacks/spatial_pa"
-
-# Forest mask (for stats only, not plotting)
-forest_mask <- rast("data/derived/resampled/forest_mask_30m_resampled.tif")
-
-# EPA Level III ecoregions
-#eco <- st_read("data/derived/vector/epa_level3_west.gpkg") |>
-#  st_transform(5070)
-
-# Rasters
-
-# Singles
-wf <- rast(file.path(pa_dir, "wildfire.tif"))
-bt <- rast(file.path(pa_dir, "biotic.tif"))
-hd <- rast(file.path(pa_dir, "hd.tif"))
-pdsi <- rast(file.path(pa_dir, "pdsi.tif"))
-
-# Doubles
-wf_bt <- rast(file.path(pa_dir, "fire_biotic.tif"))
-wf_hd <- rast(file.path(pa_dir, "fire_hd.tif"))
-wf_pdsi <- rast(file.path(pa_dir, "fire_pdsi.tif"))
-bt_hd <- rast(file.path(pa_dir, "biotic_hd.tif"))
-bt_pdsi <- rast(file.path(pa_dir, "biotic_pdsi.tif"))
-
-# Triples
-wf_bt_hd <- rast(file.path(pa_dir, "fire_biotic_hd.tif"))
-wf_bt_pdsi <- rast(file.path(pa_dir, "fire_biotic_pdsi.tif"))
-
-plot(wf)
-################################################################################
-
-### Downsample for plotting
-
-# Using temp folder
-wf_pa <- app(
-  wf,
-  fun = function(x) as.integer(!is.na(x)),
-  filename = "tmp_terra/wildfire_pa.tif",
-  overwrite = TRUE,
-  wopt = list(
-    datatype = "Byte",
-    gdal = c("COMPRESS=DEFLATE", "TILED=YES")
-  )
-)
-
-wf_plot <- aggregate(
-  !is.na(wf),   # convert to TRUE/FALSE
-  fact = 50,
-  fun  = max
-)
-ncell(wf_plot)
-
-
-
-
-# Convert downsampled raster to data frame from ggplot plotting
-wf_df <- as.data.frame(wf_plot, xy = TRUE, na.rm = TRUE)
-names(wf_df)[3] <- "presence"
-
-
-
-ggplot(wf_df) +
-  geom_raster(aes(x = x, y = y, fill = factor(presence))) +
-  #geom_sf(data = eco, fill = NA, color = "grey40", linewidth = 0.2) +
-  scale_fill_manual(
-    values = c("0" = "white", "1" = "#d73027"),
-    name = "Wildfire"
-  ) +
-  coord_sf(crs = st_crs(5070)) +
-  theme_minimal() +
-  theme(panel.grid = element_blank())
-
-
-
-
-wf_plot
 
 
