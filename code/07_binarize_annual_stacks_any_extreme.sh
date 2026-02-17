@@ -15,13 +15,13 @@ mkdir -p "${TMP_DIR}"
 
 # ANY disturbance thresholds
 WF_ANY="(A > 0.1)"
-BT_ANY="(A > 0.1)"
+BT_ANY="(A > 0.5)"
 HD_ANY="(A >= 4)"
 PD_ANY="(A <= -200)"
 
 # EXTREME disturbance thresholds
 WF_EXT="(A >= 2.25)"
-BT_EXT="(A >= 50)"
+BT_EXT="(A >= 14.94)"    #95th percentile
 HD_EXT="(A >= 6)"
 PD_EXT="(A <= -400)"
 
