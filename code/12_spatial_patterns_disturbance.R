@@ -12,7 +12,7 @@ setwd("/home/jovyan/data-store/forest-disturbance-stack-v3")
 here::i_am("README.md")
 
 # Packages
-packages <- c("here", "terra", "sf", "dplyr", "ggplot2", "patchwork", "tidyr", "ragg")
+packages <- c("here", "terra", "sf", "dplyr", "ggplot2", "patchwork", "tidyr", "ragg", "ggspatial")
 installed <- packages %in% installed.packages()[, "Package"]
 if (any(!installed)) install.packages(packages[!installed])
 
@@ -24,6 +24,7 @@ library(ggplot2)
 library(patchwork)
 library(tidyr)
 library(ragg)
+library(ggspatial)
 
 
 terraOptions(
@@ -137,7 +138,7 @@ raster_dfs <- lapply(raster_paths, raster_to_df)
 # Base map layers
 # ===========================================================
 base_map <- list(
-  geom_raster(data = df_forest, aes(x = x, y = y),
+  geom_raster(data = forest_df, aes(x = x, y = y),
               fill = "grey88", alpha = 1),
   coord_sf(
     xlim = c(west_extent["xmin"], west_extent["xmax"]),
@@ -146,8 +147,36 @@ base_map <- list(
   theme_void(),
   theme(
     panel.background = element_rect(fill = "white", color = NA),
-    plot.background  = element_rect(fill = "white", color = NA))
+    plot.background  = element_rect(fill = "white", color = NA),
+    legend.position = "bottom",
+    legend.title = element_blank(),
+    legend.text = element_text(size = 8),
+    legend.key.size = unit(0.4, "cm")
+  )
 )
+
+
+# Combine all extreme disturbance layers into a single dataframe for colors
+colors_df <- bind_rows(
+  raster_dfs$wf_any %>% mutate(disturbance = "WF (any)"),
+  raster_dfs$bt_any %>% mutate(disturbance = "BT (any)"),
+  raster_dfs$hd_any %>% mutate(disturbance = "HD (any)"),
+  
+  raster_dfs$wf_extr %>% mutate(disturbance = "WF (extr)"),
+  raster_dfs$bt_extr %>% mutate(disturbance = "BT (extr)"),
+  raster_dfs$hd_extr %>% mutate(disturbance = "HD (extr)"),
+
+  raster_dfs$wf_hd_any %>% mutate(disturbance = "WF + HD (any)"),
+  raster_dfs$bt_hd_any %>% mutate(disturbance = "BT + HD (any)"),
+  raster_dfs$wf_bt_any %>% mutate(disturbance = "WF + BT (any)"),
+  raster_dfs$wf_bt_hd_any %>% mutate(disturbance = "WF + BT + HD (any)"),
+  
+  raster_dfs$wf_hd_extr %>% mutate(disturbance = "WF + HD (extr)"),
+  raster_dfs$bt_hd_extr %>% mutate(disturbance = "BT + HD (extr)"),
+  raster_dfs$wf_bt_extr %>% mutate(disturbance = "WF + BT (extr)"),
+  raster_dfs$wf_bt_hd_extr %>% mutate(disturbance = "WF + BT + HD (extr)")
+)
+
 
 
 # ===========================================================
@@ -155,34 +184,80 @@ base_map <- list(
 # ===========================================================
 p_wf <- ggplot() +
   base_map +
-  geom_raster(data = raster_dfs$wf_any, aes(x = x, y = y), fill = "orangered1", alpha = 0.7) +
-  geom_raster(data = raster_dfs$wf_extr, aes(x = x, y = y), fill = "orangered4", alpha = 0.9) +
-  geom_sf(data = west_eco, fill = NA, color = "black", size = 0.15) +
-  labs(title = "wf")
+  geom_raster(data = filter(colors_df, disturbance %in% c("WF (any)", "WF (extr)")), aes(x = x, y = y, fill = disturbance), alpha = 0.7) +
+  scale_fill_manual(
+    name = NULL,
+    values = c(
+      "WF (any)"    = "orangered1",
+      "WF (extr)"   = "orangered4"
+    )
+  ) +
+  guides(fill = guide_legend(ncol = 1)) +
+  theme(legend.position = "bottom") +
+  geom_sf(data = west_eco, fill = NA, color = "black", size = 0.1) +
+  # Add scale bar and compass rose to just wf panel
+  annotation_scale(
+    location = "bl",
+    width_hint = 0.2,
+    text_cex = 0.4,
+    pad_x = unit(0.2, "cm"),
+    pad_y = unit(0.2, "cm")
+  ) +
+  annotation_north_arrow(
+    location = "bl",
+    which_north = "true",
+    style = north_arrow_minimal(),
+    height = unit(0.7, "cm"),
+    width  = unit(0.7, "cm"),
+    pad_x  = unit(0.2, "cm"),
+    pad_y  = unit(1, "cm")   # ← this is the key
+  )
 
 p_bt <- ggplot() +
   base_map +
-  geom_raster(data = raster_dfs$bt_any, aes(x = x, y = y), fill = "khaki1", alpha = 0.7) +
-  geom_raster(data = raster_dfs$bt_extr, aes(x = x, y = y), fill = "khaki4", alpha = 0.9) +
-  geom_sf(data = west_eco, fill = NA, color = "black", size = 0.15) +
-  labs(title = "bt")
+  geom_raster(data = filter(colors_df, disturbance %in% c("BT (any)", "BT (extr)")), aes(x = x, y = y, fill = disturbance), alpha = 0.7) +
+  scale_fill_manual(
+    name = NULL,
+    values = c(
+      "BT (any)"    = "khaki1",
+      "BT (extr)"   = "khaki4"
+    )
+  ) +
+  guides(fill = guide_legend(ncol = 1)) +
+  theme(legend.position = "bottom") +
+  geom_sf(data = west_eco, fill = NA, color = "black", size = 0.1)
 
 p_hd <- ggplot() +
   base_map +
-  geom_raster(data = raster_dfs$hd_any, aes(x = x, y = y), fill = "dodgerblue1", alpha = 0.7) +
-  geom_raster(data = raster_dfs$hd_extr, aes(x = x, y = y), fill = "dodgerblue4", alpha = 0.9) +
-  geom_sf(data = west_eco, fill = NA, color = "black", size = 0.15) +
-  labs(title = "hd")
+  geom_raster(data = filter(colors_df, disturbance %in% c("HD (any)", "HD (extr)")), aes(x = x, y = y, fill = disturbance), alpha = 0.7) +
+  scale_fill_manual(
+    name = NULL,
+    values = c(
+      "HD (any)"    = "dodgerblue1",
+      "HD (extr)"   = "dodgerblue4"
+    )
+  ) +
+  guides(fill = guide_legend(ncol = 1)) +
+  theme(legend.position = "bottom") +
+  geom_sf(data = west_eco, fill = NA, color = "black", size = 0.1)
 
-p_combo <- ggplot() +
+p_wf_bt_hd <- ggplot() +
   base_map +
-  geom_raster(data = raster_dfs$wf_bt_hd_any, aes(x = x, y = y), fill = "darkorchid1", alpha = 0.7) +
-  geom_raster(data = raster_dfs$wf_bt_hd_extr, aes(x = x, y = y), fill = "darkorchid4", alpha = 0.9) +
-  geom_sf(data = west_eco, fill = NA, color = "black", size = 0.15) +
-  labs(title = "wf, bt, hd")
+  geom_raster(data = filter(colors_df, disturbance %in% c("WF + BT + HD (any)", "WF + BT + HD (extr)")), aes(x = x, y = y, fill = disturbance), alpha = 0.7) +
+  scale_fill_manual(
+    name = NULL,
+    values = c(
+      "WF + BT + HD (any)"    = "darkorchid1",
+      "WF + BT + HD (extr)"   = "darkorchid4"
+    )
+  ) +
+  guides(fill = guide_legend(ncol = 1)) +
+  theme(legend.position = "bottom") +
+  geom_sf(data = west_eco, fill = NA, color = "black", size = 0.1)
+
 
 # Combine panels
-four_panel <- p_wf | p_bt | p_hd | p_combo 
+four_panel <- p_wf | p_bt | p_hd | p_wf_bt_hd 
 
 # Display
 four_panel
@@ -191,12 +266,16 @@ four_panel
 ggsave(
   filename = "figs/spatial_patterns/spatial_patterns_four_panel.png",
   plot     = four_panel,
-  width    = 6,        # inches (adjust as needed)
-  height   = 4,         # inches (single-row layout)
+  width    = 6,        # inches 
+  height   = 4,         # inches 
   dpi      = 300,
   units    = "in",
   bg       = "white"
 )
+
+
+
+
 
 # ===========================================================
 # Eight-panel plot
@@ -268,8 +347,8 @@ eight_panel
 ggsave(
   filename = "figs/spatial_patterns/spatial_patterns_eight_panel.png",
   plot     = eight_panel,
-  width    = 6,        # inches (adjust as needed)
-  height   = 8,         # inches (single-row layout)
+  width    = 6,        
+  height   = 8,         
   dpi      = 300,
   units    = "in",
   bg       = "white"
