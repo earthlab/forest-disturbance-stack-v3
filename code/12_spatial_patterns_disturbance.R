@@ -150,7 +150,7 @@ base_map <- list(
     plot.background  = element_rect(fill = "white", color = NA),
     legend.position = "bottom",
     legend.title = element_blank(),
-    legend.text = element_text(size = 8),
+    legend.text = element_text(size = 7),
     legend.key.size = unit(0.4, "cm")
   )
 )
@@ -206,11 +206,11 @@ p_wf <- ggplot() +
   annotation_north_arrow(
     location = "bl",
     which_north = "true",
-    style = north_arrow_minimal(),
-    height = unit(0.7, "cm"),
-    width  = unit(0.7, "cm"),
+    style = north_arrow_fancy_orienteering(text_size = 6),
+    height = unit(0.5, "cm"),
+    width  = unit(0.5, "cm"),
     pad_x  = unit(0.2, "cm"),
-    pad_y  = unit(1, "cm")   # ← this is the key
+    pad_y  = unit(0.5, "cm")   # ← this is the key
   )
 
 p_bt <- ggplot() +
