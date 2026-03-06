@@ -1,6 +1,6 @@
 ### Forest-disturbance-stack-v3
 
-### 
+### Spatial patterns of disturbance
 
 ### Matt Bitters
 ### matthew.bitters@colorado.edu
@@ -161,7 +161,7 @@ base_map <- list(
 )
 
 
-# Combine all extreme disturbance layers into a single dataframe for colors
+# Combine all disturbance layers into a single dataframe for colors
 colors_df <- bind_rows(
   raster_dfs$wf_any %>% mutate(disturbance = "WF (any)"),
   raster_dfs$bt_any %>% mutate(disturbance = "BT (any)"),
