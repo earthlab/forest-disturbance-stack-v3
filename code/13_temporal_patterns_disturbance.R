@@ -47,44 +47,44 @@ eco_shp <- "data/raw/us_eco_l3_state_boundaries/us_eco_l3_state_boundaries.shp"
 
 
 # Frequency rasters
-raster_paths <- list(
+raster_paths_fr <- list(
   ### Any disturbance
   
   # Singles
-  wf_any = "data/derived/annual_stacks/binary/frequency/wf_any_frequency.tif",
-  bt_any = "data/derived/annual_stacks/binary/frequency/bt_any_frequency.tif",
-  hd_any = "data/derived/annual_stacks/binary/frequency/hd_any_frequency.tif",
-  pd_any = "data/derived/annual_stacks/binary/frequency/pd_any_frequency.tif",
+  wf_any_fr = "data/derived/annual_stacks/binary/frequency/any/wf_any_frequency.tif",
+  bt_any_fr = "data/derived/annual_stacks/binary/frequency/any/bt_any_frequency.tif",
+  hd_any_fr = "data/derived/annual_stacks/binary/frequency/any/hd_any_frequency.tif",
+  pd_any_fr = "data/derived/annual_stacks/binary/frequency/any/pd_any_frequency.tif",
   
   # Doubles
-  wf_bt_any = "data/derived/annual_stacks/binary/frequency/wf_bt_any_frequency.tif",
-  wf_hd_any = "data/derived/annual_stacks/binary/frequency/wf_hd_any_frequency.tif",
-  wf_pd_any = "data/derived/annual_stacks/binary/frequency/wf_pd_any_frequency.tif",
-  bt_hd_any = "data/derived/annual_stacks/binary/frequency/bt_hd_any_frequency.tif",
-  bt_pd_any = "data/derived/annual_stacks/binary/frequency/bt_pd_any_frequency.tif",
+  wf_bt_any_fr = "data/derived/annual_stacks/binary/frequency/any/wf_bt_any_frequency.tif",
+  wf_hd_any_fr = "data/derived/annual_stacks/binary/frequency/any/wf_hd_any_frequency.tif",
+  wf_pd_any_fr = "data/derived/annual_stacks/binary/frequency/any/wf_pd_any_frequency.tif",
+  bt_hd_any_fr = "data/derived/annual_stacks/binary/frequency/any/bt_hd_any_frequency.tif",
+  bt_pd_any_fr = "data/derived/annual_stacks/binary/frequency/any/bt_pd_any_frequency.tif",
   
   # Triples
-  wf_bt_hd_any = "data/derived/annual_stacks/binary/frequency/wf_bt_hd_any_frequency.tif",
-  wf_bt_pd_any = "data/derived/annual_stacks/binary/frequency/wf_bt_pd_any_frequency.tif",
+  wf_bt_hd_any_fr = "data/derived/annual_stacks/binary/frequency/any/wf_bt_hd_any_frequency.tif",
+  wf_bt_pd_any_fr = "data/derived/annual_stacks/binary/frequency/any/wf_bt_pd_any_frequency.tif",
   
   ### Extreme disturbance
   
   # Singles
-  wf_extr = "data/derived/annual_stacks/binary/frequency/wf_extreme_frequency.tif",
-  bt_extr = "data/derived/annual_stacks/binary/frequency/bt_extreme_frequency.tif",
-  hd_extr = "data/derived/annual_stacks/binary/frequency/hd_extreme_frequency.tif",
-  pd_extr = "data/derived/annual_stacks/binary/frequency/pd_extreme_frequency.tif",
+  wf_extr_fr = "data/derived/annual_stacks/binary/frequency/extreme/wf_extreme_frequency.tif",
+  bt_extr_fr = "data/derived/annual_stacks/binary/frequency/extreme/bt_extreme_frequency.tif",
+  hd_extr_fr = "data/derived/annual_stacks/binary/frequency/extreme/hd_extreme_frequency.tif",
+  pd_extr_fr = "data/derived/annual_stacks/binary/frequency/extreme/pd_extreme_frequency.tif",
   
   # Doubles
-  wf_bt_extr = "data/derived/annual_stacks/binary/frequency/wf_bt_extreme_frequency.tif",
-  wf_hd_extr = "data/derived/annual_stacks/binary/frequency/wf_hd_extreme_frequency.tif",
-  wf_pd_extr = "data/derived/annual_stacks/binary/frequency/wf_pd_extreme_frequency.tif",
-  bt_hd_extr = "data/derived/annual_stacks/binary/frequency/bt_hd_extreme_frequency.tif",
-  bt_pd_extr = "data/derived/annual_stacks/binary/frequency/bt_pd_extreme_frequency.tif",
+  wf_bt_extr_fr = "data/derived/annual_stacks/binary/frequency/extreme/wf_bt_extreme_frequency.tif",
+  wf_hd_extr_fr = "data/derived/annual_stacks/binary/frequency/extreme/wf_hd_extreme_frequency.tif",
+  wf_pd_extr_fr = "data/derived/annual_stacks/binary/frequency/extreme/wf_pd_extreme_frequency.tif",
+  bt_hd_extr_fr = "data/derived/annual_stacks/binary/frequency/extreme/bt_hd_extreme_frequency.tif",
+  bt_pd_extr_fr = "data/derived/annual_stacks/binary/frequency/extreme/bt_pd_extreme_frequency.tif",
   
   # Triples
-  wf_bt_hd_extr = "data/derived/annual_stacks/binary/frequency/wf_bt_hd_extreme_frequency.tif",
-  wf_bt_pd_extr = "data/derived/annual_stacks/binary/frequency/wf_bt_pd_extreme_frequency.tif"
+  wf_bt_hd_extr_fr = "data/derived/annual_stacks/binary/frequency/extreme/wf_bt_hd_extreme_frequency.tif",
+  wf_bt_pd_extr_fr = "data/derived/annual_stacks/binary/frequency/extreme/wf_bt_pd_extreme_frequency.tif"
 )
 
 ################################################################################
@@ -131,21 +131,21 @@ west_outline <- west_eco |>
 raster_to_df <- function(r_path) {
   r <- rast(r_path)
   
-  # If these frequency rasters were written with nodata=0, undo that
-  NAflag(r) <- NA
-  r[is.na(r)] <- 0
-  
+  # aggregate for plotting
   r_agg <- aggregate(r, fact = agg_factor, fun = mean, na.rm = TRUE)
   
+  # convert to dataframe
   df <- as.data.frame(r_agg, xy = TRUE, na.rm = TRUE)
   colnames(df) <- c("x", "y", "frequency")
   
+  # keep only disturbed pixels
   df <- df %>% filter(frequency > 0)
-  return(df)
+  
+  df
 }
 
 # Prepare all raster dfs
-raster_dfs <- lapply(raster_paths, raster_to_df)
+raster_dfs_fr <- lapply(raster_paths_fr, raster_to_df)
 
 # ===========================================================
 # Base map layers
@@ -169,12 +169,6 @@ base_map <- list(
 )
 
 
-r <- rast(raster_paths$wf_any)
-r
-terra::global(r, c("min","max","mean"), na.rm = TRUE)
-terra::freq(r, digits = 0, value = TRUE)
-terra::nlyr(r)
-terra::NAflag(r)
 
 
 # ===========================================================
@@ -184,8 +178,8 @@ terra::NAflag(r)
 # wf any
 p_wf <- ggplot() +
   base_map +
-  geom_raster(data = raster_dfs$wf_any, aes(x = x, y = y, fill = frequency)) +
-  scale_fill_viridis_c(name = "WF freq", option = "magma") +
+  geom_raster(data = raster_dfs_fr$wf_any_fr, aes(x = x, y = y, fill = frequency), alpha = 0.7) +
+  scale_fill_viridis_c(name = "WF freq", option = "magma", direction = -1, na.value = "transparent") +
   geom_sf(data = west_eco, fill = NA, color = "grey75", linewidth = 0.08) +
   geom_sf(data = west_outline, fill = NA, color = "black", linewidth = 0.2) +
   # Add scale bar and compass rose to just wf panel
@@ -204,54 +198,38 @@ p_wf <- ggplot() +
     width  = unit(0.5, "cm"),
     pad_x  = unit(0.2, "cm"),
     pad_y  = unit(0.5, "cm")   # ← this is the key
-  )
+  )+
+  labs(subtitle = "WF (any)") +
+  theme(legend.position = "bottom")
 
-# bt any/extr
+# bt any
 p_bt <- ggplot() +
   base_map +
-  geom_raster(data = filter(colors_df, disturbance %in% c("BT (any)", "BT (extr)")), aes(x = x, y = y, fill = disturbance), alpha = 0.7) +
-  scale_fill_manual(
-    name = NULL,
-    values = c(
-      "BT (any)"    = "goldenrod1",
-      "BT (extr)"   = "goldenrod4"
-    )
-  ) +
+  geom_raster(data = raster_dfs_fr$bt_any_fr, aes(x = x, y = y, fill = frequency), alpha = 0.7) +
+  scale_fill_viridis_c(name = "BT freq", option = "magma", direction = -1, na.value = "transparent") +
   geom_sf(data = west_eco, fill = NA, color = "grey75", linewidth = 0.08) +
   geom_sf(data = west_outline, fill = NA, color = "black", linewidth = 0.2) +
-  guides(fill = guide_legend(ncol = 1)) +
+  labs(subtitle = "BT (any)") +
   theme(legend.position = "bottom")
 
 # hd any/extr
 p_hd <- ggplot() +
   base_map +
-  geom_raster(data = filter(colors_df, disturbance %in% c("HD (any)", "HD (extr)")), aes(x = x, y = y, fill = disturbance), alpha = 0.7) +
-  scale_fill_manual(
-    name = NULL,
-    values = c(
-      "HD (any)"    = "dodgerblue1",
-      "HD (extr)"   = "dodgerblue4"
-    )
-  ) +
+  geom_raster(data = raster_dfs_fr$hd_any_fr, aes(x = x, y = y, fill = frequency), alpha = 0.7) +
+  scale_fill_viridis_c(name = "HD freq", option = "magma", direction = -1, na.value = "transparent") +
   geom_sf(data = west_eco, fill = NA, color = "grey75", linewidth = 0.08) +
   geom_sf(data = west_outline, fill = NA, color = "black", linewidth = 0.2) +
-  guides(fill = guide_legend(ncol = 1)) +
+  labs(subtitle = "HD (any)") +
   theme(legend.position = "bottom")
 
 # wf, bt, hd any/extr
 p_wf_bt_hd <- ggplot() +
   base_map +
-  geom_raster(data = filter(colors_df, disturbance %in% c("WF + BT + HD (any)", "WF + BT + HD (extr)")), aes(x = x, y = y, fill = disturbance), alpha = 0.7) +
-  scale_fill_manual(
-    name = NULL,
-    values = c(
-      "WF + BT + HD (any)"    = "darkorchid1",
-      "WF + BT + HD (extr)"   = "darkorchid4"
-    )
-  ) +
+  geom_raster(data = raster_dfs_fr$wf_bt_hd_any_fr, aes(x = x, y = y, fill = frequency), alpha = 0.7) +
+  scale_fill_viridis_c(name = "WF + BT + HD freq", option = "magma", direction = -1, na.value = "transparent") +
   geom_sf(data = west_eco, fill = NA, color = "grey75", linewidth = 0.08) +
   geom_sf(data = west_outline, fill = NA, color = "black", linewidth = 0.2) +
-  guides(fill = guide_legend(ncol = 1)) +
+  labs(subtitle = "WF+BT+HD (any)") +
   theme(legend.position = "bottom")
 
 
@@ -263,7 +241,114 @@ four_panel
 
 # Save
 ggsave(
-  filename = "figs/spatial_patterns/spatial_patterns_four_panel.png",
+  filename = "figs/temporal_patterns/temporal_patterns_four_panel.png",
+  plot     = four_panel,
+  width    = 6,        # inches 
+  height   = 4,         # inches 
+  dpi      = 300,
+  units    = "in",
+  bg       = "white"
+)
+
+
+
+################################################################################
+
+
+
+### Four panel plot using same colors as spatial figures
+
+# wf (any)
+p_wf <- ggplot() +
+  base_map +
+  geom_raster(data = raster_dfs$wf_any, aes(x = x, y = y, fill = frequency)) +
+  scale_fill_gradient(
+    name = "WF freq",
+    low = "orangered1",
+    high = "orangered4",
+    trans = "sqrt",
+    na.value = "transparent"
+  ) +
+  geom_sf(data = west_eco, fill = NA, color = "grey75", linewidth = 0.08) +
+  geom_sf(data = west_outline, fill = NA, color = "black", linewidth = 0.2) +
+  annotation_scale(
+    location = "bl",
+    width_hint = 0.2,
+    text_cex = 0.4,
+    pad_x = unit(0.2, "cm"),
+    pad_y = unit(0.2, "cm")
+  ) +
+  annotation_north_arrow(
+    location = "bl",
+    which_north = "true",
+    style = north_arrow_fancy_orienteering(text_size = 6),
+    height = unit(0.5, "cm"),
+    width  = unit(0.5, "cm"),
+    pad_x  = unit(0.2, "cm"),
+    pad_y  = unit(0.5, "cm")
+  ) +
+  labs(subtitle = "WF (any)") +
+  theme(legend.position = "bottom")
+
+# bt (any)
+p_bt <- ggplot() +
+  base_map +
+  geom_raster(data = raster_dfs$bt_any, aes(x = x, y = y, fill = frequency)) +
+  scale_fill_gradient(
+    name = "BT freq",
+    low = "goldenrod1",
+    high = "goldenrod4",
+    trans = "sqrt",
+    na.value = "transparent"
+  ) +
+  geom_sf(data = west_eco, fill = NA, color = "grey75", linewidth = 0.08) +
+  geom_sf(data = west_outline, fill = NA, color = "black", linewidth = 0.2) +
+  labs(subtitle = "BT (any)") +
+  theme(legend.position = "bottom")
+
+# hd (any)
+p_hd <- ggplot() +
+  base_map +
+  geom_raster(data = raster_dfs$hd_any, aes(x = x, y = y, fill = frequency)) +
+  scale_fill_gradient(
+    name = "HD freq",
+    low = "dodgerblue1",
+    high = "dodgerblue4",
+    trans = "sqrt",
+    na.value = "transparent"
+  ) +
+  geom_sf(data = west_eco, fill = NA, color = "grey75", linewidth = 0.08) +
+  geom_sf(data = west_outline, fill = NA, color = "black", linewidth = 0.2) +
+  labs(subtitle = "HD (any)") +
+  theme(legend.position = "bottom")
+
+# wf+bt+hd (any)
+p_wf_bt_hd <- ggplot() +
+  base_map +
+  geom_raster(data = raster_dfs$wf_bt_hd_any, aes(x = x, y = y, fill = frequency)) +
+  scale_fill_gradient(
+    name = "WF + BT + HD freq",
+    low = "darkorchid1",
+    high = "darkorchid4",
+    trans = "sqrt",
+    na.value = "transparent"
+  ) +
+  geom_sf(data = west_eco, fill = NA, color = "grey75", linewidth = 0.08) +
+  geom_sf(data = west_outline, fill = NA, color = "black", linewidth = 0.2) +
+  labs(subtitle = "WF + BT + HD (any)") +
+  theme(legend.position = "bottom")
+
+
+
+# Combine panels
+four_panel <- p_wf | p_bt | p_hd | p_wf_bt_hd 
+
+# Display
+four_panel
+
+# Save
+ggsave(
+  filename = "figs/temporal_patterns/temporal_patterns_four_panel_colors.png",
   plot     = four_panel,
   width    = 6,        # inches 
   height   = 4,         # inches 
