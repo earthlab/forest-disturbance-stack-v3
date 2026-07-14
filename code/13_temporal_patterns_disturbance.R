@@ -51,40 +51,40 @@ raster_paths_fr <- list(
   ### Any disturbance
   
   # Singles
-  wf_any_fr = "data/derived/annual_stacks/binary/frequency/any/wf_any_frequency.tif",
-  bt_any_fr = "data/derived/annual_stacks/binary/frequency/any/bt_any_frequency.tif",
-  hd_any_fr = "data/derived/annual_stacks/binary/frequency/any/hd_any_frequency.tif",
-  pd_any_fr = "data/derived/annual_stacks/binary/frequency/any/pd_any_frequency.tif",
+  wf_any_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/any/wf_any_frequency.tif",
+  bt_any_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/any/bt_any_frequency.tif",
+  hd_any_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/any/hd_any_frequency.tif",
+  pd_any_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/any/pd_any_frequency.tif",
   
   # Doubles
-  wf_bt_any_fr = "data/derived/annual_stacks/binary/frequency/any/wf_bt_any_frequency.tif",
-  wf_hd_any_fr = "data/derived/annual_stacks/binary/frequency/any/wf_hd_any_frequency.tif",
-  wf_pd_any_fr = "data/derived/annual_stacks/binary/frequency/any/wf_pd_any_frequency.tif",
-  bt_hd_any_fr = "data/derived/annual_stacks/binary/frequency/any/bt_hd_any_frequency.tif",
-  bt_pd_any_fr = "data/derived/annual_stacks/binary/frequency/any/bt_pd_any_frequency.tif",
+  wf_bt_any_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/any/wf_bt_any_frequency.tif",
+  wf_hd_any_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/any/wf_hd_any_frequency.tif",
+  wf_pd_any_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/any/wf_pd_any_frequency.tif",
+  bt_hd_any_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/any/bt_hd_any_frequency.tif",
+  bt_pd_any_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/any/bt_pd_any_frequency.tif",
   
   # Triples
-  wf_bt_hd_any_fr = "data/derived/annual_stacks/binary/frequency/any/wf_bt_hd_any_frequency.tif",
-  wf_bt_pd_any_fr = "data/derived/annual_stacks/binary/frequency/any/wf_bt_pd_any_frequency.tif",
+  wf_bt_hd_any_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/any/wf_bt_hd_any_frequency.tif",
+  wf_bt_pd_any_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/any/wf_bt_pd_any_frequency.tif",
   
   ### Extreme disturbance
   
   # Singles
-  wf_extr_fr = "data/derived/annual_stacks/binary/frequency/extreme/wf_extreme_frequency.tif",
-  bt_extr_fr = "data/derived/annual_stacks/binary/frequency/extreme/bt_extreme_frequency.tif",
-  hd_extr_fr = "data/derived/annual_stacks/binary/frequency/extreme/hd_extreme_frequency.tif",
-  pd_extr_fr = "data/derived/annual_stacks/binary/frequency/extreme/pd_extreme_frequency.tif",
+  wf_extr_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/extreme/wf_extreme_frequency.tif",
+  bt_extr_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/extreme/bt_extreme_frequency.tif",
+  hd_extr_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/extreme/hd_extreme_frequency.tif",
+  pd_extr_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/extreme/pd_extreme_frequency.tif",
   
   # Doubles
-  wf_bt_extr_fr = "data/derived/annual_stacks/binary/frequency/extreme/wf_bt_extreme_frequency.tif",
-  wf_hd_extr_fr = "data/derived/annual_stacks/binary/frequency/extreme/wf_hd_extreme_frequency.tif",
-  wf_pd_extr_fr = "data/derived/annual_stacks/binary/frequency/extreme/wf_pd_extreme_frequency.tif",
-  bt_hd_extr_fr = "data/derived/annual_stacks/binary/frequency/extreme/bt_hd_extreme_frequency.tif",
-  bt_pd_extr_fr = "data/derived/annual_stacks/binary/frequency/extreme/bt_pd_extreme_frequency.tif",
+  wf_bt_extr_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/extreme/wf_bt_extreme_frequency.tif",
+  wf_hd_extr_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/extreme/wf_hd_extreme_frequency.tif",
+  wf_pd_extr_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/extreme/wf_pd_extreme_frequency.tif",
+  bt_hd_extr_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/extreme/bt_hd_extreme_frequency.tif",
+  bt_pd_extr_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/extreme/bt_pd_extreme_frequency.tif",
   
   # Triples
-  wf_bt_hd_extr_fr = "data/derived/annual_stacks/binary/frequency/extreme/wf_bt_hd_extreme_frequency.tif",
-  wf_bt_pd_extr_fr = "data/derived/annual_stacks/binary/frequency/extreme/wf_bt_pd_extreme_frequency.tif"
+  wf_bt_hd_extr_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/extreme/wf_bt_hd_extreme_frequency.tif",
+  wf_bt_pd_extr_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/extreme/wf_bt_pd_extreme_frequency.tif"
 )
 
 ################################################################################
@@ -94,6 +94,19 @@ forest <- rast(forest_mask)
 
 # Aggregation factor for faster plotting
 agg_factor <- 10
+
+# Focal smoothing window, measured in aggregated pixels
+# With 30 m input pixels and agg_factor = 10:
+# each aggregated pixel is approximately 300 m.
+# A 5 x 5 window therefore smooths across approximately 1.5 km.
+smooth_window <- 5
+
+# Equal-weight moving-window mean
+smooth_weights <- matrix(
+  1,
+  nrow = smooth_window,
+  ncol = smooth_window
+)
 
 # Aggregate forest mask
 forest_ds <- aggregate(forest, fact = agg_factor, fun = max)  # small enough for plotting
@@ -128,20 +141,71 @@ west_outline <- west_eco |>
 # ===========================================================
 # Function to prepare raster for plotting
 # ===========================================================
+# ===========================================================
+# Function to aggregate and smooth frequency rasters
+# ===========================================================
 raster_to_df <- function(r_path) {
+  
+  # Load original 30 m frequency raster
   r <- rast(r_path)
   
-  # aggregate for plotting
-  r_agg <- aggregate(r, fact = agg_factor, fun = mean, na.rm = TRUE)
+  # ---------------------------------------------------------
+  # 1. Aggregate for faster plotting
+  #
+  # Use mean rather than sum so that the resulting value
+  # represents average disturbance frequency within each
+  # aggregated pixel.
+  # ---------------------------------------------------------
+  r_agg <- aggregate(
+    r,
+    fact = agg_factor,
+    fun = mean,
+    na.rm = TRUE
+  )
   
-  # convert to dataframe
-  df <- as.data.frame(r_agg, xy = TRUE, na.rm = TRUE)
-  colnames(df) <- c("x", "y", "frequency")
+  # ---------------------------------------------------------
+  # 2. Smooth the aggregated frequency raster
+  #
+  # This calculates the mean frequency in the moving window.
+  # Zeros remain valid observations during smoothing.
+  # ---------------------------------------------------------
+  r_smooth <- focal(
+    r_agg,
+    w = smooth_weights,
+    fun = mean,
+    na.rm = TRUE,
+    na.policy = "omit"
+  )
   
-  # keep only disturbed pixels
-  df <- df %>% filter(frequency > 0)
+  # ---------------------------------------------------------
+  # 3. Restrict smoothed values to the aggregated forest mask
+  #
+  # This prevents smoothing from being displayed outside the
+  # mapped forest area.
+  # ---------------------------------------------------------
+  r_smooth <- mask(
+    r_smooth,
+    forest_ds,
+    maskvalues = 0
+  )
   
-  df
+  # Give the raster layer a consistent name
+  names(r_smooth) <- "frequency"
+  
+  # ---------------------------------------------------------
+  # 4. Convert to dataframe for ggplot
+  # ---------------------------------------------------------
+  df <- as.data.frame(
+    r_smooth,
+    xy = TRUE,
+    na.rm = TRUE
+  )
+  
+  # Only plot locations with smoothed frequency above zero
+  df <- df %>%
+    filter(frequency > 0)
+  
+  return(df)
 }
 
 # Prepare all raster dfs
@@ -163,6 +227,7 @@ base_map <- list(
     plot.background  = element_rect(fill = "white", color = NA),
     legend.position = "bottom",
     legend.title = element_blank(),
+    plot.title = element_text(size = 10),
     legend.text = element_text(size = 6),
     legend.key.size = unit(0.4, "cm")
   )
@@ -178,7 +243,7 @@ base_map <- list(
 # wf any
 p_wf <- ggplot() +
   base_map +
-  geom_raster(data = raster_dfs_fr$wf_any_fr, aes(x = x, y = y, fill = frequency), alpha = 0.7) +
+  geom_raster(data = raster_dfs_fr$wf_any_fr, aes(x = x, y = y, fill = frequency)) +
   scale_fill_viridis_c(name = "WF freq", option = "magma", direction = -1, na.value = "transparent") +
   geom_sf(data = west_eco, fill = NA, color = "grey75", linewidth = 0.08) +
   geom_sf(data = west_outline, fill = NA, color = "black", linewidth = 0.2) +
@@ -199,37 +264,37 @@ p_wf <- ggplot() +
     pad_x  = unit(0.2, "cm"),
     pad_y  = unit(0.5, "cm")   # ← this is the key
   )+
-  labs(subtitle = "WF (any)") +
+  labs(title = "Wildfire") +
   theme(legend.position = "bottom")
 
 # bt any
 p_bt <- ggplot() +
   base_map +
-  geom_raster(data = raster_dfs_fr$bt_any_fr, aes(x = x, y = y, fill = frequency), alpha = 0.7) +
+  geom_raster(data = raster_dfs_fr$bt_any_fr, aes(x = x, y = y, fill = frequency)) +
   scale_fill_viridis_c(name = "BT freq", option = "magma", direction = -1, na.value = "transparent") +
   geom_sf(data = west_eco, fill = NA, color = "grey75", linewidth = 0.08) +
   geom_sf(data = west_outline, fill = NA, color = "black", linewidth = 0.2) +
-  labs(subtitle = "BT (any)") +
+  labs(title = "Bark beetle tree\nmortality") +
   theme(legend.position = "bottom")
 
 # hd any/extr
 p_hd <- ggplot() +
   base_map +
-  geom_raster(data = raster_dfs_fr$hd_any_fr, aes(x = x, y = y, fill = frequency), alpha = 0.7) +
+  geom_raster(data = raster_dfs_fr$hd_any_fr, aes(x = x, y = y, fill = frequency)) +
   scale_fill_viridis_c(name = "HD freq", option = "magma", direction = -1, na.value = "transparent") +
   geom_sf(data = west_eco, fill = NA, color = "grey75", linewidth = 0.08) +
   geom_sf(data = west_outline, fill = NA, color = "black", linewidth = 0.2) +
-  labs(subtitle = "HD (any)") +
+  labs(title = "Hotter drought index") +
   theme(legend.position = "bottom")
 
 # wf, bt, hd any/extr
 p_wf_bt_hd <- ggplot() +
   base_map +
-  geom_raster(data = raster_dfs_fr$wf_bt_hd_any_fr, aes(x = x, y = y, fill = frequency), alpha = 0.7) +
+  geom_raster(data = raster_dfs_fr$wf_bt_hd_any_fr, aes(x = x, y = y, fill = frequency)) +
   scale_fill_viridis_c(name = "WF + BT + HD freq", option = "magma", direction = -1, na.value = "transparent") +
   geom_sf(data = west_eco, fill = NA, color = "grey75", linewidth = 0.08) +
   geom_sf(data = west_outline, fill = NA, color = "black", linewidth = 0.2) +
-  labs(subtitle = "WF+BT+HD (any)") +
+  labs(title = "Disturbance interactions") +
   theme(legend.position = "bottom")
 
 
@@ -243,7 +308,7 @@ four_panel
 ggsave(
   filename = "figs/temporal_patterns/temporal_patterns_four_panel.png",
   plot     = four_panel,
-  width    = 6,        # inches 
+  width    = 7,        # inches 
   height   = 4,         # inches 
   dpi      = 300,
   units    = "in",
@@ -255,104 +320,3 @@ ggsave(
 ################################################################################
 
 
-
-### Four panel plot using same colors as spatial figures
-
-# wf (any)
-p_wf <- ggplot() +
-  base_map +
-  geom_raster(data = raster_dfs$wf_any, aes(x = x, y = y, fill = frequency)) +
-  scale_fill_gradient(
-    name = "WF freq",
-    low = "orangered1",
-    high = "orangered4",
-    trans = "sqrt",
-    na.value = "transparent"
-  ) +
-  geom_sf(data = west_eco, fill = NA, color = "grey75", linewidth = 0.08) +
-  geom_sf(data = west_outline, fill = NA, color = "black", linewidth = 0.2) +
-  annotation_scale(
-    location = "bl",
-    width_hint = 0.2,
-    text_cex = 0.4,
-    pad_x = unit(0.2, "cm"),
-    pad_y = unit(0.2, "cm")
-  ) +
-  annotation_north_arrow(
-    location = "bl",
-    which_north = "true",
-    style = north_arrow_fancy_orienteering(text_size = 6),
-    height = unit(0.5, "cm"),
-    width  = unit(0.5, "cm"),
-    pad_x  = unit(0.2, "cm"),
-    pad_y  = unit(0.5, "cm")
-  ) +
-  labs(subtitle = "WF (any)") +
-  theme(legend.position = "bottom")
-
-# bt (any)
-p_bt <- ggplot() +
-  base_map +
-  geom_raster(data = raster_dfs$bt_any, aes(x = x, y = y, fill = frequency)) +
-  scale_fill_gradient(
-    name = "BT freq",
-    low = "goldenrod1",
-    high = "goldenrod4",
-    trans = "sqrt",
-    na.value = "transparent"
-  ) +
-  geom_sf(data = west_eco, fill = NA, color = "grey75", linewidth = 0.08) +
-  geom_sf(data = west_outline, fill = NA, color = "black", linewidth = 0.2) +
-  labs(subtitle = "BT (any)") +
-  theme(legend.position = "bottom")
-
-# hd (any)
-p_hd <- ggplot() +
-  base_map +
-  geom_raster(data = raster_dfs$hd_any, aes(x = x, y = y, fill = frequency)) +
-  scale_fill_gradient(
-    name = "HD freq",
-    low = "dodgerblue1",
-    high = "dodgerblue4",
-    trans = "sqrt",
-    na.value = "transparent"
-  ) +
-  geom_sf(data = west_eco, fill = NA, color = "grey75", linewidth = 0.08) +
-  geom_sf(data = west_outline, fill = NA, color = "black", linewidth = 0.2) +
-  labs(subtitle = "HD (any)") +
-  theme(legend.position = "bottom")
-
-# wf+bt+hd (any)
-p_wf_bt_hd <- ggplot() +
-  base_map +
-  geom_raster(data = raster_dfs$wf_bt_hd_any, aes(x = x, y = y, fill = frequency)) +
-  scale_fill_gradient(
-    name = "WF + BT + HD freq",
-    low = "darkorchid1",
-    high = "darkorchid4",
-    trans = "sqrt",
-    na.value = "transparent"
-  ) +
-  geom_sf(data = west_eco, fill = NA, color = "grey75", linewidth = 0.08) +
-  geom_sf(data = west_outline, fill = NA, color = "black", linewidth = 0.2) +
-  labs(subtitle = "WF + BT + HD (any)") +
-  theme(legend.position = "bottom")
-
-
-
-# Combine panels
-four_panel <- p_wf | p_bt | p_hd | p_wf_bt_hd 
-
-# Display
-four_panel
-
-# Save
-ggsave(
-  filename = "figs/temporal_patterns/temporal_patterns_four_panel_colors.png",
-  plot     = four_panel,
-  width    = 6,        # inches 
-  height   = 4,         # inches 
-  dpi      = 300,
-  units    = "in",
-  bg       = "white"
-)
