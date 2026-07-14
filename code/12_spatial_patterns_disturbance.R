@@ -50,52 +50,73 @@ raster_paths_sp <- list(
   ### Any disturbance
   
   # Singles
-  wf_any_sp = "data/derived/annual_stacks/binary/spatial_presence/any/wf_any_presence.tif",
-  bt_any_sp = "data/derived/annual_stacks/binary/spatial_presence/any/bt_any_presence.tif",
-  hd_any_sp = "data/derived/annual_stacks/binary/spatial_presence/any/hd_any_presence.tif",
-  pd_any_sp = "data/derived/annual_stacks/binary/spatial_presence/any/pd_any_presence.tif",
+  wf_any_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/any/wf_any_presence.tif",
+  bt_any_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/any/bt_any_presence.tif",
+  hd_any_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/any/hd_any_presence.tif",
+  pd_any_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/any/pd_any_presence.tif",
 
   # Doubles
-  wf_bt_any_sp = "data/derived/annual_stacks/binary/spatial_presence/any/wf_bt_any_presence.tif",
-  wf_hd_any_sp = "data/derived/annual_stacks/binary/spatial_presence/any/wf_hd_any_presence.tif",
-  wf_pd_any_sp = "data/derived/annual_stacks/binary/spatial_presence/any/wf_pd_any_presence.tif",
-  bt_hd_any_sp = "data/derived/annual_stacks/binary/spatial_presence/any/bt_hd_any_presence.tif",
-  bt_pd_any_sp = "data/derived/annual_stacks/binary/spatial_presence/any/bt_pd_any_presence.tif",
+  wf_bt_any_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/any/wf_bt_any_presence.tif",
+  wf_hd_any_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/any/wf_hd_any_presence.tif",
+  wf_pd_any_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/any/wf_pd_any_presence.tif",
+  bt_hd_any_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/any/bt_hd_any_presence.tif",
+  bt_pd_any_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/any/bt_pd_any_presence.tif",
 
   # Triples
-  wf_bt_hd_any_sp = "data/derived/annual_stacks/binary/spatial_presence/any/wf_bt_hd_any_presence.tif",
-  wf_bt_pd_any_sp = "data/derived/annual_stacks/binary/spatial_presence/any/wf_bt_pd_any_presence.tif",
+  wf_bt_hd_any_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/any/wf_bt_hd_any_presence.tif",
+  wf_bt_pd_any_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/any/wf_bt_pd_any_presence.tif",
 
   ### Extreme disturbance
 
   # Singles
-  wf_extr_sp = "data/derived/annual_stacks/binary/spatial_presence/extreme/wf_extreme_presence.tif",
-  bt_extr_sp = "data/derived/annual_stacks/binary/spatial_presence/extreme/bt_extreme_presence.tif",
-  hd_extr_sp = "data/derived/annual_stacks/binary/spatial_presence/extreme/hd_extreme_presence.tif",
-  pd_extr_sp = "data/derived/annual_stacks/binary/spatial_presence/extreme/pd_extreme_presence.tif",
+  wf_extr_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/extreme/wf_extreme_presence.tif",
+  bt_extr_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/extreme/bt_extreme_presence.tif",
+  hd_extr_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/extreme/hd_extreme_presence.tif",
+  pd_extr_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/extreme/pd_extreme_presence.tif",
 
   # Doubles
-  wf_bt_extr_sp = "data/derived/annual_stacks/binary/spatial_presence/extreme/wf_bt_extreme_presence.tif",
-  wf_hd_extr_sp = "data/derived/annual_stacks/binary/spatial_presence/extreme/wf_hd_extreme_presence.tif",
-  wf_pd_extr_sp = "data/derived/annual_stacks/binary/spatial_presence/extreme/wf_pd_extreme_presence.tif",
-  bt_hd_extr_sp = "data/derived/annual_stacks/binary/spatial_presence/extreme/bt_hd_extreme_presence.tif",
-  bt_pd_extr_sp = "data/derived/annual_stacks/binary/spatial_presence/extreme/bt_pd_extreme_presence.tif",
+  wf_bt_extr_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/extreme/wf_bt_extreme_presence.tif",
+  wf_hd_extr_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/extreme/wf_hd_extreme_presence.tif",
+  wf_pd_extr_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/extreme/wf_pd_extreme_presence.tif",
+  bt_hd_extr_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/extreme/bt_hd_extreme_presence.tif",
+  bt_pd_extr_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/extreme/bt_pd_extreme_presence.tif",
 
   # Triples
-  wf_bt_hd_extr_sp = "data/derived/annual_stacks/binary/spatial_presence/extreme/wf_bt_hd_extreme_presence.tif",
-  wf_bt_pd_extr_sp = "data/derived/annual_stacks/binary/spatial_presence/extreme/wf_bt_pd_extreme_presence.tif"
+  wf_bt_hd_extr_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/extreme/wf_bt_hd_extreme_presence.tif",
+  wf_bt_pd_extr_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/extreme/wf_bt_pd_extreme_presence.tif"
 )
 
 ################################################################################
 
-# Load forest mask as raster
+# ===========================================================
+# Visualization settings
+# ===========================================================
+
+# Load forest mask as raster 
 forest <- rast(forest_mask)
 
-# Aggregation factor for faster plotting
-agg_factor <- 10
+# Original rasters are 30 m.
+# A factor of 10 creates 300 m plotting cells.
+plot_agg_factor <- 10
 
-# Aggregate forest mask
-forest_ds <- aggregate(forest, fact = agg_factor, fun = max)  # small enough for plotting
+# Neighborhood size used to smooth the aggregated raster.
+# At 300 m resolution, a 5 x 5 window spans approximately 1.5 km.
+focal_window <- 5
+
+# Minimum value of the smoothed surface retained as broad
+# disturbance presence. Lower values preserve more scattered
+# disturbance; higher values emphasize denser regional patterns.
+smooth_threshold <- 0.05
+
+# Aggregate forest mask for plotting only.
+# max retains a plotting cell when any underlying 30 m cell is forest.
+forest_ds <- aggregate(
+  forest,
+  fact = plot_agg_factor,
+  fun = max,
+  na.rm = TRUE
+)
+
 
 # Convert forest_ds to dataframe and rename columns
 forest_df <- as.data.frame(forest_ds, xy = TRUE)
@@ -125,19 +146,70 @@ west_outline <- west_eco |>
   st_as_sf()
 
 # ===========================================================
-# Function to prepare raster for plotting
+# Function to prepare and smooth raster for plotting
 # ===========================================================
-raster_to_df <- function(r_path) {
+raster_to_df <- function(
+    r_path,
+    agg_factor = plot_agg_factor,
+    window_size = focal_window,
+    threshold = smooth_threshold
+) {
+  
+  # Load original 30 m binary raster
   r <- rast(r_path)
   
-  # use mean instead of max to emphasize broad regional pattern
-  r_agg <- aggregate(r, fact = agg_factor, fun = mean, na.rm = TRUE)
+  # ---------------------------------------------------------
+  # 1. Aggregate for faster visualization
+  # ---------------------------------------------------------
+  # The mean is used only as an intermediate summary.
+  # It represents the fraction of disturbed 30 m cells within
+  # each aggregated plotting cell.
+  r_agg <- aggregate(
+    r,
+    fact = agg_factor,
+    fun = mean,
+    na.rm = TRUE
+  )
   
-  df <- as.data.frame(r_agg, xy = TRUE, na.rm = TRUE)
-  colnames(df) <- c("x", "y", "value")
+  # ---------------------------------------------------------
+  # 2. Smooth the broad spatial pattern
+  # ---------------------------------------------------------
+  # A normalized focal-weight matrix calculates the local mean.
+  w <- matrix(
+    1 / (window_size^2),
+    nrow = window_size,
+    ncol = window_size
+  )
   
-  # keep only cells with some disturbance
-  df <- df %>% filter(value > 0)
+  r_smooth <- focal(
+    r_agg,
+    w = w,
+    fun = sum,
+    na.rm = TRUE,
+    fillvalue = NA
+  )
+  
+  # ---------------------------------------------------------
+  # 3. Convert the smoothed result back to presence/absence
+  # ---------------------------------------------------------
+  # Values below the threshold become NA so they are not plotted.
+  # Retained cells are assigned a value of 1.
+  r_presence <- ifel(
+    r_smooth >= threshold,
+    1,
+    NA
+  )
+  
+  # ---------------------------------------------------------
+  # 4. Convert plotting raster to a data frame
+  # ---------------------------------------------------------
+  df <- as.data.frame(
+    r_presence,
+    xy = TRUE,
+    na.rm = TRUE
+  )
+  
+  names(df) <- c("x", "y", "value")
   
   return(df)
 }
@@ -161,6 +233,7 @@ base_map <- list(
     plot.background  = element_rect(fill = "white", color = NA),
     legend.position = "bottom",
     legend.title = element_blank(),
+    plot.title = element_text(size = 10),
     legend.text = element_text(size = 6),
     legend.key.size = unit(0.4, "cm")
   )
@@ -197,6 +270,27 @@ colors_df <- bind_rows(
 )
 
 
+# Panel titles and legend labels
+
+wf_legend_labels <- c(
+  "WF (any)"  = "CBI > 0.1",
+  "WF (extr)" = "CBI ≥ 2.25"
+)
+
+bt_legend_labels <- c(
+  "BT (any)"  = "% > 0.5",
+  "BT (extr)" = "% ≥ 14.94"
+)
+
+hd_legend_labels <- c(
+  "HD (any)"  = "Index ≥ 4",
+  "HD (extr)" = "Index ≥ 6"
+)
+
+wf_bt_hd_legend_labels <- c(
+  "WF + BT + HD (any)"  = "Any disturbance\nthresholds",
+  "WF + BT + HD (extr)" = "Extreme disturbance\nthresholds"
+)
 
 # ===========================================================
 # Four-panel plot
@@ -211,12 +305,15 @@ p_wf <- ggplot() +
     values = c(
       "WF (any)"    = "orangered1",
       "WF (extr)"   = "orangered4"
-    )
+    ),
+    breaks = c("WF (any)", "WF (extr)"),
+    labels = wf_legend_labels
   ) +
   geom_sf(data = west_eco, fill = NA, color = "grey75", linewidth = 0.08) +
   geom_sf(data = west_outline, fill = NA, color = "black", linewidth = 0.2) +
   guides(fill = guide_legend(ncol = 1)) +
   theme(legend.position = "bottom") +
+  labs(title = "Burned area by\nwildfire") +
   # Add scale bar and compass rose to just wf panel
   annotation_scale(
     location = "bl",
@@ -244,12 +341,15 @@ p_bt <- ggplot() +
     values = c(
       "BT (any)"    = "goldenrod1",
       "BT (extr)"   = "goldenrod4"
-    )
+    ),
+    breaks = c("BT (any)", "BT (extr)"),
+    labels = bt_legend_labels
   ) +
   geom_sf(data = west_eco, fill = NA, color = "grey75", linewidth = 0.08) +
   geom_sf(data = west_outline, fill = NA, color = "black", linewidth = 0.2) +
   guides(fill = guide_legend(ncol = 1)) +
-  theme(legend.position = "bottom")
+  theme(legend.position = "bottom") +
+  labs(title = "Bark beetle tree\nmortality ")
 
 # hd any/extr
 p_hd <- ggplot() +
@@ -260,12 +360,15 @@ p_hd <- ggplot() +
     values = c(
       "HD (any)"    = "dodgerblue1",
       "HD (extr)"   = "dodgerblue4"
-    )
+    ),
+    breaks = c("HD (any)", "HD (extr)"),
+    labels = hd_legend_labels
   ) +
   geom_sf(data = west_eco, fill = NA, color = "grey75", linewidth = 0.08) +
   geom_sf(data = west_outline, fill = NA, color = "black", linewidth = 0.2) +
   guides(fill = guide_legend(ncol = 1)) +
-  theme(legend.position = "bottom")
+  theme(legend.position = "bottom") +
+  labs(title = "Hotter drought index")
 
 # wf, bt, hd any/extr
 p_wf_bt_hd <- ggplot() +
@@ -276,12 +379,15 @@ p_wf_bt_hd <- ggplot() +
     values = c(
       "WF + BT + HD (any)"    = "darkorchid1",
       "WF + BT + HD (extr)"   = "darkorchid4"
-    )
+    ),
+    breaks = c("WF + BT + HD (any)", "WF + BT + HD (extr)"),
+    labels = wf_bt_hd_legend_labels
   ) +
   geom_sf(data = west_eco, fill = NA, color = "grey75", linewidth = 0.08) +
   geom_sf(data = west_outline, fill = NA, color = "black", linewidth = 0.2) +
   guides(fill = guide_legend(ncol = 1)) +
-  theme(legend.position = "bottom")
+  theme(legend.position = "bottom") +
+  labs(title = "Disturbance interactions")
 
 
 # Combine panels
@@ -294,7 +400,7 @@ four_panel
 ggsave(
   filename = "figs/spatial_patterns/spatial_patterns_four_panel.png",
   plot     = four_panel,
-  width    = 6,        # inches 
+  width    = 7,        # inches 
   height   = 4,         # inches 
   dpi      = 300,
   units    = "in",
