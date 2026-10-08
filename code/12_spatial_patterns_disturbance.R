@@ -50,40 +50,40 @@ raster_paths_sp <- list(
   ### Any disturbance
   
   # Singles
-  wf_any_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/any/wf_any_presence.tif",
-  bt_any_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/any/bt_any_presence.tif",
-  hd_any_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/any/hd_any_presence.tif",
-  pd_any_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/any/pd_any_presence.tif",
+  wf_any_sp = "data/derived/annual_stacks/binary/spatial_presence/any/wf_any_presence.tif",
+  bt_any_sp = "data/derived/annual_stacks/binary/spatial_presence/any/bt_any_presence.tif",
+  hd_any_sp = "data/derived/annual_stacks/binary/spatial_presence/any/hd_any_presence.tif",
+  pd_any_sp = "data/derived/annual_stacks/binary/spatial_presence/any/pd_any_presence.tif",
 
   # Doubles
-  wf_bt_any_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/any/wf_bt_any_presence.tif",
-  wf_hd_any_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/any/wf_hd_any_presence.tif",
-  wf_pd_any_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/any/wf_pd_any_presence.tif",
-  bt_hd_any_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/any/bt_hd_any_presence.tif",
-  bt_pd_any_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/any/bt_pd_any_presence.tif",
+  wf_bt_any_sp = "data/derived/annual_stacks/binary/spatial_presence/any/wf_bt_any_presence.tif",
+  wf_hd_any_sp = "data/derived/annual_stacks/binary/spatial_presence/any/wf_hd_any_presence.tif",
+  wf_pd_any_sp = "data/derived/annual_stacks/binary/spatial_presence/any/wf_pd_any_presence.tif",
+  bt_hd_any_sp = "data/derived/annual_stacks/binary/spatial_presence/any/bt_hd_any_presence.tif",
+  bt_pd_any_sp = "data/derived/annual_stacks/binary/spatial_presence/any/bt_pd_any_presence.tif",
 
   # Triples
-  wf_bt_hd_any_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/any/wf_bt_hd_any_presence.tif",
-  wf_bt_pd_any_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/any/wf_bt_pd_any_presence.tif",
+  wf_bt_hd_any_sp = "data/derived/annual_stacks/binary/spatial_presence/any/wf_bt_hd_any_presence.tif",
+  wf_bt_pd_any_sp = "data/derived/annual_stacks/binary/spatial_presence/any/wf_bt_pd_any_presence.tif",
 
   ### Extreme disturbance
 
   # Singles
-  wf_extr_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/extreme/wf_extreme_presence.tif",
-  bt_extr_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/extreme/bt_extreme_presence.tif",
-  hd_extr_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/extreme/hd_extreme_presence.tif",
-  pd_extr_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/extreme/pd_extreme_presence.tif",
+  wf_extr_sp = "data/derived/annual_stacks/binary/spatial_presence/extreme/wf_extreme_presence.tif",
+  bt_extr_sp = "data/derived/annual_stacks/binary/spatial_presence/extreme/bt_extreme_presence.tif",
+  hd_extr_sp = "data/derived/annual_stacks/binary/spatial_presence/extreme/hd_extreme_presence.tif",
+  pd_extr_sp = "data/derived/annual_stacks/binary/spatial_presence/extreme/pd_extreme_presence.tif",
 
   # Doubles
-  wf_bt_extr_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/extreme/wf_bt_extreme_presence.tif",
-  wf_hd_extr_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/extreme/wf_hd_extreme_presence.tif",
-  wf_pd_extr_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/extreme/wf_pd_extreme_presence.tif",
-  bt_hd_extr_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/extreme/bt_hd_extreme_presence.tif",
-  bt_pd_extr_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/extreme/bt_pd_extreme_presence.tif",
+  wf_bt_extr_sp = "data/derived/annual_stacks/binary/spatial_presence/extreme/wf_bt_extreme_presence.tif",
+  wf_hd_extr_sp = "data/derived/annual_stacks/binary/spatial_presence/extreme/wf_hd_extreme_presence.tif",
+  wf_pd_extr_sp = "data/derived/annual_stacks/binary/spatial_presence/extreme/wf_pd_extreme_presence.tif",
+  bt_hd_extr_sp = "data/derived/annual_stacks/binary/spatial_presence/extreme/bt_hd_extreme_presence.tif",
+  bt_pd_extr_sp = "data/derived/annual_stacks/binary/spatial_presence/extreme/bt_pd_extreme_presence.tif",
 
   # Triples
-  wf_bt_hd_extr_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/extreme/wf_bt_hd_extreme_presence.tif",
-  wf_bt_pd_extr_sp = "data/derived/derived/annual_stacks/binary/spatial_presence/extreme/wf_bt_pd_extreme_presence.tif"
+  wf_bt_hd_extr_sp = "data/derived/annual_stacks/binary/spatial_presence/extreme/wf_bt_hd_extreme_presence.tif",
+  wf_bt_pd_extr_sp = "data/derived/annual_stacks/binary/spatial_presence/extreme/wf_bt_pd_extreme_presence.tif"
 )
 
 ################################################################################
