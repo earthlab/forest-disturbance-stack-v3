@@ -70,7 +70,9 @@ any_dat <- read_csv(
   ),
   show_col_types = FALSE
 ) %>%
-  mutate(mode = "Any")
+  mutate(
+    mode = "Any"
+  )
 
 
 extreme_dat <- read_csv(
@@ -80,7 +82,9 @@ extreme_dat <- read_csv(
   ),
   show_col_types = FALSE
 ) %>%
-  mutate(mode = "Extreme")
+  mutate(
+    mode = "Extreme"
+  )
 
 
 dat <- bind_rows(
@@ -90,46 +94,113 @@ dat <- bind_rows(
 
 
 # ==============================================================================
-# 4. Disturbance labels and ordering
+# 4. Keep only wildfire, biotic disturbance, and hotter drought
+#
+# PDSI and all combinations involving PDSI are excluded here.
+# The underlying CSV files and raster stacks remain unchanged.
 # ==============================================================================
 
-disturbance_levels <- c(
+keep_disturbances <- c(
   "wf",
   "bt",
   "hd",
-  "pd",
   "wf_bt",
   "wf_hd",
-  "wf_pd",
   "bt_hd",
-  "bt_pd",
-  "wf_bt_hd",
-  "wf_bt_pd"
-)
-
-
-disturbance_labels <- c(
-  "Wildfire",
-  "Biotic",
-  "Hotter drought",
-  "PDSI drought",
-  "Wildfire + Biotic",
-  "Wildfire + Hotter drought",
-  "Wildfire + PDSI drought",
-  "Biotic + Hotter drought",
-  "Biotic + PDSI drought",
-  "Wildfire + Biotic + Hotter drought",
-  "Wildfire + Biotic + PDSI drought"
+  "wf_bt_hd"
 )
 
 
 dat <- dat %>%
+  filter(
+    disturbance %in% keep_disturbances
+  )
+
+
+# ==============================================================================
+# 5. Add readable disturbance labels and panel positions
+#
+# Layout:
+#
+# Row 1:
+#   Wildfire | Biotic | Hotter drought
+#
+# Row 2:
+#   Wildfire + Biotic | Wildfire + Hotter drought | Biotic + Hotter drought
+#
+# Row 3:
+#   Wildfire + Biotic + Hotter drought
+#
+# ==============================================================================
+
+disturbance_lookup <- tibble(
+  disturbance = c(
+    "wf",
+    "bt",
+    "hd",
+    "wf_bt",
+    "wf_hd",
+    "bt_hd",
+    "wf_bt_hd"
+  ),
+  
+  disturbance_label = c(
+    "Wildfire",
+    "Biotic",
+    "Drought",
+    "Wildfire + Biotic",
+    "Wildfire + Drought",
+    "Biotic + Drought",
+    "Wildfire + Biotic + Drought"
+  ),
+  
+  disturbance_group = c(
+    "Single disturbances",
+    "Single disturbances",
+    "Single disturbances",
+    "Two-way combinations",
+    "Two-way combinations",
+    "Two-way combinations",
+    "Three-way combination"
+  ),
+  
+  panel_column = c(
+    "1",
+    "2",
+    "3",
+    "1",
+    "2",
+    "3",
+    "1"
+  )
+)
+
+
+dat <- dat %>%
+  left_join(
+    disturbance_lookup,
+    by = "disturbance"
+  ) %>%
   mutate(
-    disturbance = factor(
-      disturbance,
-      levels = disturbance_levels,
-      labels = disturbance_labels
+    
+    disturbance_group = factor(
+      disturbance_group,
+      levels = c(
+        "Single disturbances",
+        "Two-way combinations",
+        "Three-way combination"
+      )
     ),
+    
+    panel_column = factor(
+      panel_column,
+      levels = c(
+        "1",
+        "2",
+        "3"
+      )
+    ),
+    
     mode = factor(
       mode,
       levels = c(
@@ -141,27 +212,34 @@ dat <- dat %>%
 
 
 # ==============================================================================
-# 5. Separate annual observations and totals
+# 6. Separate annual observations and totals
 # ==============================================================================
 
 annual_dat <- dat %>%
-  filter(period != "Total") %>%
+  filter(
+    period != "Total"
+  ) %>%
   mutate(
     year = as.integer(period)
   )
 
 
 total_dat <- dat %>%
-  filter(period == "Total")
+  filter(
+    period == "Total"
+  )
 
 
 # ==============================================================================
-# 6. Basic checks
+# 7. Basic checks
 # ==============================================================================
 
 print(
   annual_dat %>%
-    group_by(mode, disturbance) %>%
+    group_by(
+      mode,
+      disturbance_label
+    ) %>%
     summarise(
       n_years = n(),
       min_year = min(year),
@@ -175,18 +253,21 @@ print(
   total_dat %>%
     select(
       mode,
-      disturbance,
+      disturbance_label,
       area_km2
     )
 )
 
 
 # ==============================================================================
-# 7. Plot theme
+# 8. Plot theme
 # ==============================================================================
 
-theme_disturbance <- theme_bw(base_size = 11) +
+theme_disturbance <- theme_bw(
+  base_size = 11
+) +
   theme(
+    
     panel.grid.minor = element_blank(),
     
     strip.background = element_blank(),
@@ -209,28 +290,170 @@ theme_disturbance <- theme_bw(base_size = 11) +
 
 
 # ==============================================================================
-# 8. FIGURE 1
-# Annual area — all disturbance types, ANY
+# 9. Helper function for annual figures
 #
-# Each panel represents one disturbance or disturbance combination.
+# facet_grid() places:
+#   singles on row 1
+#   doubles on row 2
+#   triple on row 3
+#
+# The labeller uses disturbance_label so that each occupied panel gets the
+# correct disturbance name.
+# ==============================================================================
+
+make_annual_plot <- function(
+    plot_data,
+    plot_title,
+    plot_subtitle,
+    show_legend = FALSE
+) {
+  
+  p <- ggplot(
+    plot_data,
+    aes(
+      x = year,
+      y = area_km2
+    )
+  ) +
+    
+    geom_col(
+      width = 0.8
+    ) +
+    
+    facet_grid(
+      rows = vars(
+        disturbance_group
+      ),
+      cols = vars(
+        panel_column
+      ),
+      scales = "free_y",
+      switch = "y"
+    ) +
+    
+    scale_x_continuous(
+      breaks = seq(
+        2000,
+        2020,
+        by = 5
+      )
+    ) +
+    
+    scale_y_continuous(
+      labels = label_number(
+        big.mark = ","
+      ),
+      expand = expansion(
+        mult = c(
+          0,
+          0.05
+        )
+      )
+    ) +
+    
+    labs(
+      title = plot_title,
+      subtitle = plot_subtitle,
+      x = NULL,
+      y = expression(
+        "Area (km"^2*")"
+      )
+    ) +
+    
+    theme_disturbance +
+    
+    theme(
+      strip.placement = "outside"
+    )
+  
+  return(p)
+}
+
+
+# ==============================================================================
+# NOTE ABOUT PANEL TITLES
+#
+# Because facet_grid() is being used to force the exact 3 x 3 layout, the
+# default column strips would otherwise say "1", "2", and "3".
+#
+# We therefore use a slightly different approach below: panel-specific titles
+# are added directly as text inside each panel.
+# ==============================================================================
+
+
+# ==============================================================================
+# 10. Create label dataset for panel titles
+# ==============================================================================
+
+panel_labels <- disturbance_lookup %>%
+  mutate(
+    disturbance_group = factor(
+      disturbance_group,
+      levels = c(
+        "Single disturbances",
+        "Two-way combinations",
+        "Three-way combination"
+      )
+    ),
+    
+    panel_column = factor(
+      panel_column,
+      levels = c(
+        "1",
+        "2",
+        "3"
+      )
+    )
+  )
+
+
+# ==============================================================================
+# 11. FIGURE 1
+# Annual area — ANY disturbance
 # ==============================================================================
 
 p_annual_any <- annual_dat %>%
-  filter(mode == "Any") %>%
+  
+  filter(
+    mode == "Any"
+  ) %>%
+  
   ggplot(
     aes(
       x = year,
       y = area_km2
     )
   ) +
+  
   geom_col(
     width = 0.8
   ) +
-  facet_wrap(
-    ~ disturbance,
-    scales = "free_y",
-    ncol = 3
+  
+  geom_text(
+    data = panel_labels,
+    aes(
+      x = -Inf,
+      y = Inf,
+      label = disturbance_label
+    ),
+    inherit.aes = FALSE,
+    hjust = -0.05,
+    vjust = 1.3,
+    fontface = "bold",
+    size = 3.3
   ) +
+  
+  facet_grid(
+    rows = vars(
+      disturbance_group
+    ),
+    cols = vars(
+      panel_column
+    ),
+    scales = "free_y",
+    switch = "y"
+  ) +
+  
   scale_x_continuous(
     breaks = seq(
       2000,
@@ -238,21 +461,36 @@ p_annual_any <- annual_dat %>%
       by = 5
     )
   ) +
+  
   scale_y_continuous(
     labels = label_number(
       big.mark = ","
     ),
     expand = expansion(
-      mult = c(0, 0.05)
+      mult = c(
+        0,
+        0.12
+      )
     )
   ) +
+  
   labs(
     title = "Annual forest disturbance area",
     subtitle = "Any disturbance thresholds, western U.S., 2000–2020",
     x = NULL,
-    y = expression("Area (km"^2*")")
+    y = expression(
+      "Area (km"^2*")"
+    )
   ) +
-  theme_disturbance
+  
+  theme_disturbance +
+  
+  theme(
+    strip.placement = "outside",
+    
+    # Hide the meaningless 1/2/3 column strips
+    strip.text.x = element_blank()
+  )
 
 
 p_annual_any
@@ -265,32 +503,58 @@ ggsave(
   ),
   plot = p_annual_any,
   width = 12,
-  height = 11,
+  height = 9,
   dpi = 300
 )
 
 
 # ==============================================================================
-# 9. FIGURE 2
-# Annual area — all disturbance types, EXTREME
+# 12. FIGURE 2
+# Annual area — EXTREME disturbance
 # ==============================================================================
 
 p_annual_extreme <- annual_dat %>%
-  filter(mode == "Extreme") %>%
+  
+  filter(
+    mode == "Extreme"
+  ) %>%
+  
   ggplot(
     aes(
       x = year,
       y = area_km2
     )
   ) +
+  
   geom_col(
     width = 0.8
   ) +
-  facet_wrap(
-    ~ disturbance,
-    scales = "free_y",
-    ncol = 3
+  
+  geom_text(
+    data = panel_labels,
+    aes(
+      x = -Inf,
+      y = Inf,
+      label = disturbance_label
+    ),
+    inherit.aes = FALSE,
+    hjust = -0.05,
+    vjust = 1.3,
+    fontface = "bold",
+    size = 3.3
   ) +
+  
+  facet_grid(
+    rows = vars(
+      disturbance_group
+    ),
+    cols = vars(
+      panel_column
+    ),
+    scales = "free_y",
+    switch = "y"
+  ) +
+  
   scale_x_continuous(
     breaks = seq(
       2000,
@@ -298,21 +562,34 @@ p_annual_extreme <- annual_dat %>%
       by = 5
     )
   ) +
+  
   scale_y_continuous(
     labels = label_number(
       big.mark = ","
     ),
     expand = expansion(
-      mult = c(0, 0.05)
+      mult = c(
+        0,
+        0.12
+      )
     )
   ) +
+  
   labs(
     title = "Annual extreme forest disturbance area",
     subtitle = "Extreme disturbance thresholds, western U.S., 2000–2020",
     x = NULL,
-    y = expression("Area (km"^2*")")
+    y = expression(
+      "Area (km"^2*")"
+    )
   ) +
-  theme_disturbance
+  
+  theme_disturbance +
+  
+  theme(
+    strip.placement = "outside",
+    strip.text.x = element_blank()
+  )
 
 
 p_annual_extreme
@@ -325,116 +602,349 @@ ggsave(
   ),
   plot = p_annual_extreme,
   width = 12,
-  height = 11,
+  height = 9,
   dpi = 300
 )
 
 
 # ==============================================================================
-# 10. FIGURE 3
-# ANY and EXTREME annual areas together
+# 13. FIGURE 3
+# ANY vs EXTREME annual area
 #
-# This is useful for comparing the temporal patterns under the two thresholds.
+# Side-by-side bars within each year.
 # ==============================================================================
 
-p_annual_both <- annual_dat %>%
-  ggplot(
-    aes(
-      x = year,
-      y = area_km2,
-      fill = mode
-    )
-  ) +
-  geom_col(
-    position = position_dodge(
-      width = 0.8
-    ),
-    width = 0.75
-  ) +
-  facet_wrap(
-    ~ disturbance,
-    scales = "free_y",
-    ncol = 3
-  ) +
-  scale_x_continuous(
-    breaks = seq(
-      2000,
-      2020,
-      by = 5
-    )
-  ) +
-  scale_y_continuous(
-    labels = label_number(
-      big.mark = ","
-    ),
-    expand = expansion(
-      mult = c(0, 0.05)
-    )
-  ) +
-  labs(
-    title = "Annual forest disturbance area",
-    subtitle = "Any and extreme disturbance thresholds, western U.S., 2000–2020",
-    x = NULL,
-    y = expression("Area (km"^2*")"),
-    fill = "Threshold"
-  ) +
-  theme_disturbance
+# Colors
+threshold_colors <- c(
+  "Any" = "#4D4D4D",
+  "Extreme" = "#D95F02"
+)
 
 
+
+# Function for making one disturbance panel
+make_disturbance_panel <- function(
+    data,
+    disturbance_name,
+    show_x = FALSE,
+    show_y_title = FALSE
+) {
+  
+  p <- data %>%
+    
+    filter(
+      disturbance_label == disturbance_name
+    ) %>%
+    
+    ggplot(
+      aes(
+        x = year,
+        y = area_km2,
+        fill = mode
+      )
+    ) +
+    
+    geom_col(
+      position = position_dodge(
+        width = 0.8
+      ),
+      width = 0.75
+    ) +
+    
+    scale_fill_manual(
+      values = threshold_colors,
+      name = "Threshold"
+    ) +
+    
+    scale_x_continuous(
+      breaks = seq(
+        2000,
+        2020,
+        by = 5
+      )
+    ) +
+    
+    scale_y_continuous(
+      labels = label_number(
+        big.mark = ","
+      ),
+      expand = expansion(
+        mult = c(0, 0.08)
+      )
+    ) +
+    
+    labs(
+      title = disturbance_name,
+      x = NULL,
+      y = if (show_y_title) {
+        expression("Area (km"^2*")")
+      } else {
+        NULL
+      }
+    ) +
+    
+    theme_bw(
+      base_size = 10
+    ) +
+    
+    theme(
+      panel.grid.minor = element_blank(),
+      
+      plot.title = element_text(
+        face = "bold",
+        size = 10
+      ),
+      
+      legend.position = "none",
+      
+      axis.title.x = element_blank()
+    )
+  
+  
+  if (!show_x) {
+    
+    p <- p +
+      theme(
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank()
+      )
+  }
+  
+  
+  return(p)
+}
+
+
+
+# Create seven individual panels
+
+
+
+# Row 1 — single disturbances
+p_wf <- make_disturbance_panel(
+  annual_dat,
+  "Wildfire"
+)
+
+p_bt <- make_disturbance_panel(
+  annual_dat,
+  "Biotic"
+)
+
+p_hd <- make_disturbance_panel(
+  annual_dat,
+  "Drought"
+)
+
+
+# Row 2 — two-way combinations
+p_wf_bt <- make_disturbance_panel(
+  annual_dat,
+  "Wildfire + Biotic",
+  show_y_title = TRUE
+)
+
+p_wf_hd <- make_disturbance_panel(
+  annual_dat,
+  "Wildfire + Drought",
+  show_x = TRUE
+)
+
+
+p_bt_hd <- make_disturbance_panel(
+  annual_dat,
+  "Biotic + Drought",
+  show_x = TRUE
+)
+
+
+# Row 3 — three-way combination
+p_wf_bt_hd <- make_disturbance_panel(
+  annual_dat,
+  "Wildfire + Biotic + Drought",
+  show_x = TRUE
+)
+
+
+
+# Allow the legend to be collected from the individual plots
+p_wf <- p_wf +
+  theme(
+    legend.position = "bottom"
+  )
+
+p_bt <- p_bt +
+  theme(
+    legend.position = "bottom"
+  )
+
+p_hd <- p_hd +
+  theme(
+    legend.position = "bottom"
+  )
+
+p_wf_bt <- p_wf_bt +
+  theme(
+    legend.position = "bottom"
+  )
+
+p_wf_hd <- p_wf_hd +
+  theme(
+    legend.position = "bottom"
+  )
+
+p_bt_hd <- p_bt_hd +
+  theme(
+    legend.position = "bottom"
+  )
+
+p_wf_bt_hd <- p_wf_bt_hd +
+  theme(
+    legend.position = "bottom"
+  )
+
+
+
+# Create layout
+#
+# "A" through "G" = disturbance plots
+# "#" = blank space
+# "L" = collected legend
+
+
+design <- "
+ABC
+DEF
+G#L
+"
+
+
+
+# Assemble figure
+p_annual_both <-
+  
+  p_wf +
+  p_bt +
+  p_hd +
+  p_wf_bt +
+  p_wf_hd +
+  p_bt_hd +
+  p_wf_bt_hd +
+  
+  plot_layout(
+    design = design,
+    guides = "collect"
+  ) +
+  
+  plot_annotation(
+    title = "Annual disturbance area across western US forests (2000-2020)",
+    theme = theme(
+      plot.title = element_text(
+        face = "bold",
+        size = 12
+      )
+    )
+  ) &
+  
+  theme(
+    legend.position = "bottom"
+  )
+
+
+# View figure
 p_annual_both
 
 
+
+# Save figure
 ggsave(
   filename = file.path(
     fig_dir,
     "annual_disturbance_area_any_extreme.png"
   ),
   plot = p_annual_both,
-  width = 12,
-  height = 11,
+  width = 6.5,
+  height = 5,
   dpi = 300
 )
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 # ==============================================================================
-# 11. FIGURE 4
+# 14. FIGURE 4
 # Total area-through-time, 2000–2020
 #
 # IMPORTANT:
-# These totals are sums of annual disturbed area.
-# They are NOT unique cumulative spatial footprints.
+# These are sums of annual disturbed area.
+#
+# A pixel disturbed in multiple years contributes once for each year.
+#
+# These values therefore differ conceptually from the cumulative spatial
+# presence rasters, which represent unique spatial footprint.
 # ==============================================================================
 
+total_dat <- total_dat %>%
+  mutate(
+    
+    disturbance_label = factor(
+      disturbance_label,
+      levels = disturbance_lookup$disturbance_label
+    )
+  )
+
+
 p_total <- total_dat %>%
+  
   ggplot(
     aes(
-      x = disturbance,
+      x = disturbance_label,
       y = area_km2,
       fill = mode
     )
   ) +
+  
   geom_col(
     position = position_dodge(
       width = 0.8
     ),
     width = 0.7
   ) +
+  
   scale_y_continuous(
     labels = label_number(
       big.mark = ","
     ),
     expand = expansion(
-      mult = c(0, 0.05)
+      mult = c(
+        0,
+        0.05
+      )
     )
   ) +
+  
   labs(
     title = "Total forest disturbance area, 2000–2020",
     subtitle = "Sum of annual disturbed area",
     x = NULL,
-    y = expression("Area-through-time (km"^2*")"),
+    y = expression(
+      "Area-through-time (km"^2*")"
+    ),
     fill = "Threshold"
   ) +
+  
   theme_disturbance +
+  
   theme(
     axis.text.x = element_text(
       angle = 45,
@@ -454,86 +964,5 @@ ggsave(
   plot = p_total,
   width = 11,
   height = 7,
-  dpi = 300
-)
-
-
-# ==============================================================================
-# 12. OPTIONAL FIGURE
-# Focus specifically on disturbance combinations
-#
-# This may be more useful than putting singles and combinations into the same
-# figure because their areas differ substantially.
-# ==============================================================================
-
-combination_names <- c(
-  "Wildfire + Biotic",
-  "Wildfire + Hotter drought",
-  "Wildfire + PDSI drought",
-  "Biotic + Hotter drought",
-  "Biotic + PDSI drought",
-  "Wildfire + Biotic + Hotter drought",
-  "Wildfire + Biotic + PDSI drought"
-)
-
-
-p_combinations <- annual_dat %>%
-  filter(
-    disturbance %in% combination_names
-  ) %>%
-  ggplot(
-    aes(
-      x = year,
-      y = area_km2,
-      fill = mode
-    )
-  ) +
-  geom_col(
-    position = position_dodge(
-      width = 0.8
-    ),
-    width = 0.75
-  ) +
-  facet_wrap(
-    ~ disturbance,
-    scales = "free_y",
-    ncol = 2
-  ) +
-  scale_x_continuous(
-    breaks = seq(
-      2000,
-      2020,
-      by = 5
-    )
-  ) +
-  scale_y_continuous(
-    labels = label_number(
-      big.mark = ","
-    ),
-    expand = expansion(
-      mult = c(0, 0.05)
-    )
-  ) +
-  labs(
-    title = "Annual compound disturbance area",
-    subtitle = "Same-year disturbance combinations, western U.S., 2000–2020",
-    x = NULL,
-    y = expression("Area (km"^2*")"),
-    fill = "Threshold"
-  ) +
-  theme_disturbance
-
-
-p_combinations
-
-
-ggsave(
-  filename = file.path(
-    fig_dir,
-    "annual_compound_disturbance_area.png"
-  ),
-  plot = p_combinations,
-  width = 10,
-  height = 11,
   dpi = 300
 )
