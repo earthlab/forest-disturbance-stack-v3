@@ -398,7 +398,7 @@ four_panel
 
 # Save
 ggsave(
-  filename = "figs/spatial_patterns/spatial_patterns_four_panel.png",
+  filename = "figures/spatial_patterns/spatial_patterns_four_panel.png",
   plot     = four_panel,
   width    = 7,        # inches 
   height   = 4,         # inches 

@@ -51,40 +51,40 @@ raster_paths_fr <- list(
   ### Any disturbance
   
   # Singles
-  wf_any_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/any/wf_any_frequency.tif",
-  bt_any_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/any/bt_any_frequency.tif",
-  hd_any_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/any/hd_any_frequency.tif",
-  pd_any_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/any/pd_any_frequency.tif",
+  wf_any_fr = "data/derived/annual_stacks/binary/frequency/any/wf_any_frequency.tif",
+  bt_any_fr = "data/derived/annual_stacks/binary/frequency/any/bt_any_frequency.tif",
+  hd_any_fr = "data/derived/annual_stacks/binary/frequency/any/hd_any_frequency.tif",
+  pd_any_fr = "data/derived/annual_stacks/binary/frequency/any/pd_any_frequency.tif",
   
   # Doubles
-  wf_bt_any_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/any/wf_bt_any_frequency.tif",
-  wf_hd_any_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/any/wf_hd_any_frequency.tif",
-  wf_pd_any_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/any/wf_pd_any_frequency.tif",
-  bt_hd_any_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/any/bt_hd_any_frequency.tif",
-  bt_pd_any_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/any/bt_pd_any_frequency.tif",
+  wf_bt_any_fr = "data/derived/annual_stacks/binary/frequency/any/wf_bt_any_frequency.tif",
+  wf_hd_any_fr = "data/derived/annual_stacks/binary/frequency/any/wf_hd_any_frequency.tif",
+  wf_pd_any_fr = "data/derived/annual_stacks/binary/frequency/any/wf_pd_any_frequency.tif",
+  bt_hd_any_fr = "data/derived/annual_stacks/binary/frequency/any/bt_hd_any_frequency.tif",
+  bt_pd_any_fr = "data/derived/annual_stacks/binary/frequency/any/bt_pd_any_frequency.tif",
   
   # Triples
-  wf_bt_hd_any_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/any/wf_bt_hd_any_frequency.tif",
-  wf_bt_pd_any_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/any/wf_bt_pd_any_frequency.tif",
+  wf_bt_hd_any_fr = "data/derived/annual_stacks/binary/frequency/any/wf_bt_hd_any_frequency.tif",
+  wf_bt_pd_any_fr = "data/derived/annual_stacks/binary/frequency/any/wf_bt_pd_any_frequency.tif",
   
   ### Extreme disturbance
   
   # Singles
-  wf_extr_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/extreme/wf_extreme_frequency.tif",
-  bt_extr_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/extreme/bt_extreme_frequency.tif",
-  hd_extr_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/extreme/hd_extreme_frequency.tif",
-  pd_extr_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/extreme/pd_extreme_frequency.tif",
+  wf_extr_fr = "data/derived/annual_stacks/binary/frequency/extreme/wf_extreme_frequency.tif",
+  bt_extr_fr = "data/derived/annual_stacks/binary/frequency/extreme/bt_extreme_frequency.tif",
+  hd_extr_fr = "data/derived/annual_stacks/binary/frequency/extreme/hd_extreme_frequency.tif",
+  pd_extr_fr = "data/derived/annual_stacks/binary/frequency/extreme/pd_extreme_frequency.tif",
   
   # Doubles
-  wf_bt_extr_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/extreme/wf_bt_extreme_frequency.tif",
-  wf_hd_extr_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/extreme/wf_hd_extreme_frequency.tif",
-  wf_pd_extr_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/extreme/wf_pd_extreme_frequency.tif",
-  bt_hd_extr_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/extreme/bt_hd_extreme_frequency.tif",
-  bt_pd_extr_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/extreme/bt_pd_extreme_frequency.tif",
+  wf_bt_extr_fr = "data/derived/annual_stacks/binary/frequency/extreme/wf_bt_extreme_frequency.tif",
+  wf_hd_extr_fr = "data/derived/annual_stacks/binary/frequency/extreme/wf_hd_extreme_frequency.tif",
+  wf_pd_extr_fr = "data/derived/annual_stacks/binary/frequency/extreme/wf_pd_extreme_frequency.tif",
+  bt_hd_extr_fr = "data/derived/annual_stacks/binary/frequency/extreme/bt_hd_extreme_frequency.tif",
+  bt_pd_extr_fr = "data/derived/annual_stacks/binary/frequency/extreme/bt_pd_extreme_frequency.tif",
   
   # Triples
-  wf_bt_hd_extr_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/extreme/wf_bt_hd_extreme_frequency.tif",
-  wf_bt_pd_extr_fr = "data/derived/derived/annual_stacks/binary/frequency/frequency/extreme/wf_bt_pd_extreme_frequency.tif"
+  wf_bt_hd_extr_fr = "data/derived/annual_stacks/binary/frequency/extreme/wf_bt_hd_extreme_frequency.tif",
+  wf_bt_pd_extr_fr = "data/derived/annual_stacks/binary/frequency/extreme/wf_bt_pd_extreme_frequency.tif"
 )
 
 ################################################################################
@@ -306,7 +306,7 @@ four_panel
 
 # Save
 ggsave(
-  filename = "figs/temporal_patterns/temporal_patterns_four_panel.png",
+  filename = "figures/temporal_patterns/temporal_patterns_four_panel.png",
   plot     = four_panel,
   width    = 7,        # inches 
   height   = 4,         # inches 
@@ -320,3 +320,256 @@ ggsave(
 ################################################################################
 
 
+
+##### Temporal progression of disturbance
+
+
+# Annual binarized directory
+annual_dir <- "data/derived/annual_stacks/binary"
+
+# Define years
+years <- 2000:2020
+
+# Define paths (any disturbance)
+annual_paths <- file.path(
+  annual_dir,
+  paste0("annual_stack_any_", years, ".tif")
+)
+
+# Check that all annual stacks exist
+stopifnot(all(file.exists(annual_paths)))
+
+
+# Temporal bins
+periods <- list(
+  "2000–2004" = 2000:2004,
+  "2005–2009" = 2005:2009,
+  "2010–2014" = 2010:2014,
+  "2015–2020" = 2015:2020
+)
+
+
+# Forest mask path
+forest_mask <- "data/derived/resampled/forest_mask_30m_resampled.tif"
+
+# Ecoregion polygons
+eco_shp <- "data/raw/us_eco_l3_state_boundaries/us_eco_l3_state_boundaries.shp"
+
+# Load forest mask as raster
+forest <- rast(forest_mask)
+
+# Compound disturbance types to map
+compound_types <- c(
+  "wf_bt",
+  "wf_hd",
+  "bt_hd",
+  "wf_bt_hd"
+)
+
+# Visualization settings
+agg_factor <- 10
+
+smooth_window <- 5
+
+smooth_weights <- matrix(
+  1,
+  nrow = smooth_window,
+  ncol = smooth_window
+)
+
+forest_ds <- aggregate(
+  forest,
+  fact = agg_factor,
+  fun = max,
+  na.rm = TRUE
+)
+
+# Function to calculate annual compound disturbance
+get_annual_compound <- function(path, compound) {
+  
+  r <- rast(path)
+  
+  # Annual stack band order:
+  # 1 = wildfire
+  # 2 = biotic disturbance
+  # 3 = hotter drought
+  # 4 = PDSI
+  
+  wf <- r[[1]] > 0
+  bt <- r[[2]] > 0
+  hd <- r[[3]] > 0
+  
+  if (compound == "wf_bt") {
+    
+    out <- wf & bt
+    
+  } else if (compound == "wf_hd") {
+    
+    out <- wf & hd
+    
+  } else if (compound == "bt_hd") {
+    
+    out <- bt & hd
+    
+  } else if (compound == "wf_bt_hd") {
+    
+    out <- wf & bt & hd
+    
+  } else {
+    
+    stop("Unknown compound disturbance type.")
+    
+  }
+  
+  # Restrict to forest
+  out <- mask(
+    out,
+    forest,
+    maskvalues = 0
+  )
+  
+  return(out)
+}
+
+
+
+# Calculate proportion of years experiencing each compound disturbance within a temporal period
+get_period_compound <- function(
+    period_years,
+    compound
+) {
+  
+  # Find annual raster paths belonging to this period
+  paths <- annual_paths[
+    years %in% period_years
+  ]
+  
+  # Calculate compound disturbance separately for each year
+  annual_compounds <- lapply(
+    paths,
+    get_annual_compound,
+    compound = compound
+  )
+  
+  # Combine annual rasters into a multilayer SpatRaster
+  annual_compounds <- rast(
+    annual_compounds
+  )
+  
+  # Number of years compound disturbance occurred
+  period_count <- sum(
+    annual_compounds,
+    na.rm = TRUE
+  )
+  
+  # Convert to proportion of years
+  #
+  # This makes the 5-year and 6-year periods directly comparable.
+  period_prop <- period_count /
+    length(period_years)
+  
+  names(period_prop) <- "proportion"
+  
+  return(period_prop)
+}
+
+
+# Prepare period raster for plotting
+period_raster_to_df <- function(r) {
+  
+  # ---------------------------------------------------------
+  # 1. Aggregate to 300 m for plotting
+  # ---------------------------------------------------------
+    r_agg <- aggregate(
+    r,
+    fact = agg_factor,
+    fun = mean,
+    na.rm = TRUE
+  )
+  
+    # ---------------------------------------------------------
+  # 2. Smooth broad spatial pattern
+  # ---------------------------------------------------------
+    r_smooth <- focal(
+    r_agg,
+    w = smooth_weights,
+    fun = mean,
+    na.rm = TRUE,
+    na.policy = "omit"
+  )
+  
+  # ---------------------------------------------------------
+  # 3. Restrict to forest
+  # ---------------------------------------------------------
+    r_smooth <- mask(
+    r_smooth,
+    forest_ds,
+    maskvalues = 0
+  )
+  
+  
+  names(r_smooth) <- "proportion"
+  
+  # ---------------------------------------------------------
+  # 4. Convert to dataframe
+  # ---------------------------------------------------------
+    df <- as.data.frame(
+    r_smooth,
+    xy = TRUE,
+    na.rm = TRUE
+  )
+  
+  df <- df %>%
+    filter(proportion > 0)
+  
+  return(df)
+}
+
+
+
+# Calculate all compound × period combinations
+period_dfs <- list()
+
+
+for (compound in compound_types) {
+  
+  for (period_name in names(periods)) {
+    
+    message(
+      "Processing ",
+      compound,
+      ": ",
+      period_name
+    )
+    
+    # Calculate temporal frequency
+    r_period <- get_period_compound(
+      period_years = periods[[period_name]],
+      compound = compound
+    )
+    
+    # Prepare for plotting
+    df_period <- period_raster_to_df(
+      r_period
+    )
+    
+    # Add identifying columns
+    df_period$compound <- compound
+    df_period$period <- period_name
+    
+    # Store
+    period_dfs[[
+      paste(
+        compound,
+        period_name,
+        sep = "_"
+      )
+    ]] <- df_period
+  }
+}
+
+
+# Combine into one dataframe
+temporal_progression_df <- bind_rows(
+  period_dfs
+)
