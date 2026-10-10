@@ -324,41 +324,22 @@ ggsave(
 ##### Temporal progression of disturbance
 
 
-# Annual binarized directory
-annual_dir <- "data/derived/annual_stacks/binary"
+################################################################################
+#### TEMPORAL PROGRESSION OF COMPOUND DISTURBANCE
+################################################################################
 
-# Define years
-years <- 2000:2020
+# ===========================================================
+# Paths
+# ===========================================================
 
-# Define paths (any disturbance)
-annual_paths <- file.path(
-  annual_dir,
-  paste0("annual_stack_any_", years, ".tif")
-)
-
-# Check that all annual stacks exist
-stopifnot(all(file.exists(annual_paths)))
+# Period-level compound disturbance rasters created in Python
+progression_dir <- "data/derived/temporal_progression"
 
 
-# Temporal bins
-periods <- list(
-  "2000–2004" = 2000:2004,
-  "2005–2009" = 2005:2009,
-  "2010–2014" = 2010:2014,
-  "2015–2020" = 2015:2020
-)
+# ===========================================================
+# Define disturbance types and periods
+# ===========================================================
 
-
-# Forest mask path
-forest_mask <- "data/derived/resampled/forest_mask_30m_resampled.tif"
-
-# Ecoregion polygons
-eco_shp <- "data/raw/us_eco_l3_state_boundaries/us_eco_l3_state_boundaries.shp"
-
-# Load forest mask as raster
-forest <- rast(forest_mask)
-
-# Compound disturbance types to map
 compound_types <- c(
   "wf_bt",
   "wf_hd",
@@ -366,131 +347,107 @@ compound_types <- c(
   "wf_bt_hd"
 )
 
-# Visualization settings
-agg_factor <- 10
-
-smooth_window <- 5
-
-smooth_weights <- matrix(
-  1,
-  nrow = smooth_window,
-  ncol = smooth_window
+periods <- c(
+  "2000_2004",
+  "2005_2009",
+  "2010_2014",
+  "2015_2020"
 )
 
-forest_ds <- aggregate(
-  forest,
-  fact = agg_factor,
-  fun = max,
-  na.rm = TRUE
+
+# Labels used in the figure
+compound_labels <- c(
+  "wf_bt"    = "Wildfire + Biotic",
+  "wf_hd"    = "Wildfire + Hotter drought",
+  "bt_hd"    = "Biotic + Hotter drought",
+  "wf_bt_hd" = "Wildfire + Biotic + Hotter drought"
 )
 
-# Function to calculate annual compound disturbance
-get_annual_compound <- function(path, compound) {
-  
-  r <- rast(path)
-  
-  # Annual stack band order:
-  # 1 = wildfire
-  # 2 = biotic disturbance
-  # 3 = hotter drought
-  # 4 = PDSI
-  
-  wf <- r[[1]] > 0
-  bt <- r[[2]] > 0
-  hd <- r[[3]] > 0
-  
-  if (compound == "wf_bt") {
-    
-    out <- wf & bt
-    
-  } else if (compound == "wf_hd") {
-    
-    out <- wf & hd
-    
-  } else if (compound == "bt_hd") {
-    
-    out <- bt & hd
-    
-  } else if (compound == "wf_bt_hd") {
-    
-    out <- wf & bt & hd
-    
-  } else {
-    
-    stop("Unknown compound disturbance type.")
-    
-  }
-  
-  # Restrict to forest
-  out <- mask(
-    out,
-    forest,
-    maskvalues = 0
+period_labels <- c(
+  "2000_2004" = "2000–2004",
+  "2005_2009" = "2005–2009",
+  "2010_2014" = "2010–2014",
+  "2015_2020" = "2015–2020"
+)
+
+
+# ===========================================================
+# Create raster path table
+# ===========================================================
+
+progression_paths <- expand.grid(
+  compound = compound_types,
+  period = periods,
+  stringsAsFactors = FALSE
+) %>%
+  mutate(
+    path = file.path(
+      progression_dir,
+      paste0(
+        compound,
+        "_",
+        period,
+        ".tif"
+      )
+    )
   )
+
+
+# Check that all 16 rasters exist
+if (!all(file.exists(progression_paths$path))) {
   
-  return(out)
-}
-
-
-
-# Calculate proportion of years experiencing each compound disturbance within a temporal period
-get_period_compound <- function(
-    period_years,
-    compound
-) {
-  
-  # Find annual raster paths belonging to this period
-  paths <- annual_paths[
-    years %in% period_years
+  missing_files <- progression_paths$path[
+    !file.exists(progression_paths$path)
   ]
   
-  # Calculate compound disturbance separately for each year
-  annual_compounds <- lapply(
-    paths,
-    get_annual_compound,
-    compound = compound
+  stop(
+    paste(
+      "Missing temporal progression rasters:\n",
+      paste(
+        missing_files,
+        collapse = "\n"
+      )
+    )
   )
-  
-  # Combine annual rasters into a multilayer SpatRaster
-  annual_compounds <- rast(
-    annual_compounds
-  )
-  
-  # Number of years compound disturbance occurred
-  period_count <- sum(
-    annual_compounds,
-    na.rm = TRUE
-  )
-  
-  # Convert to proportion of years
-  #
-  # This makes the 5-year and 6-year periods directly comparable.
-  period_prop <- period_count /
-    length(period_years)
-  
-  names(period_prop) <- "proportion"
-  
-  return(period_prop)
 }
 
 
-# Prepare period raster for plotting
-period_raster_to_df <- function(r) {
+# ===========================================================
+# Function to prepare temporal progression raster for plotting
+# ===========================================================
+
+progression_raster_to_df <- function(r_path) {
+  
+  # Load original 30 m period-level raster
+  #
+  # Values represent the proportion of years in the period
+  # experiencing the specified same-year compound disturbance.
+  r <- rast(r_path)
+  
   
   # ---------------------------------------------------------
-  # 1. Aggregate to 300 m for plotting
+  # 1. Aggregate to 300 m for visualization
+  #
+  # Mean preserves the average period-level proportion within
+  # each 300 m plotting cell.
   # ---------------------------------------------------------
-    r_agg <- aggregate(
+  
+  r_agg <- aggregate(
     r,
     fact = agg_factor,
     fun = mean,
     na.rm = TRUE
   )
   
-    # ---------------------------------------------------------
-  # 2. Smooth broad spatial pattern
+  
   # ---------------------------------------------------------
-    r_smooth <- focal(
+  # 2. Smooth broad spatial pattern
+  #
+  # Uses the same visualization-only focal smoothing as the
+  # other temporal-pattern maps.
+  # ---------------------------------------------------------
+  
+  r_smooth <- focal(
     r_agg,
     w = smooth_weights,
     fun = mean,
@@ -498,78 +455,294 @@ period_raster_to_df <- function(r) {
     na.policy = "omit"
   )
   
+  
   # ---------------------------------------------------------
-  # 3. Restrict to forest
+  # 3. Restrict smoothed surface to forest
   # ---------------------------------------------------------
-    r_smooth <- mask(
+  
+  r_smooth <- mask(
     r_smooth,
     forest_ds,
     maskvalues = 0
   )
   
   
+  # Consistent raster name
   names(r_smooth) <- "proportion"
   
+  
   # ---------------------------------------------------------
-  # 4. Convert to dataframe
+  # 4. Convert to dataframe for ggplot
   # ---------------------------------------------------------
-    df <- as.data.frame(
+  
+  df <- as.data.frame(
     r_smooth,
     xy = TRUE,
     na.rm = TRUE
   )
   
+  
+  # Only retain locations where compound disturbance occurred
   df <- df %>%
     filter(proportion > 0)
+  
   
   return(df)
 }
 
 
+# ===========================================================
+# Prepare all 16 rasters for plotting
+# ===========================================================
 
-# Calculate all compound × period combinations
-period_dfs <- list()
+progression_dfs <- vector(
+  "list",
+  nrow(progression_paths)
+)
 
 
-for (compound in compound_types) {
+for (i in seq_len(nrow(progression_paths))) {
   
-  for (period_name in names(periods)) {
-    
-    message(
-      "Processing ",
-      compound,
-      ": ",
-      period_name
-    )
-    
-    # Calculate temporal frequency
-    r_period <- get_period_compound(
-      period_years = periods[[period_name]],
-      compound = compound
-    )
-    
-    # Prepare for plotting
-    df_period <- period_raster_to_df(
-      r_period
-    )
-    
-    # Add identifying columns
-    df_period$compound <- compound
-    df_period$period <- period_name
-    
-    # Store
-    period_dfs[[
-      paste(
-        compound,
-        period_name,
-        sep = "_"
-      )
-    ]] <- df_period
-  }
+  message(
+    "Preparing ",
+    progression_paths$compound[i],
+    " — ",
+    progression_paths$period[i]
+  )
+  
+  df <- progression_raster_to_df(
+    progression_paths$path[i]
+  )
+  
+  df$compound <- progression_paths$compound[i]
+  df$period <- progression_paths$period[i]
+  
+  progression_dfs[[i]] <- df
 }
 
 
 # Combine into one dataframe
 temporal_progression_df <- bind_rows(
-  period_dfs
+  progression_dfs
+)
+
+
+# ===========================================================
+# Add figure labels and ordering
+# ===========================================================
+
+temporal_progression_df <- temporal_progression_df %>%
+  
+  mutate(
+    
+    compound_label = compound_labels[
+      compound
+    ],
+    
+    period_label = period_labels[
+      period
+    ],
+    
+    compound_label = factor(
+      compound_label,
+      levels = compound_labels[
+        compound_types
+      ]
+    ),
+    
+    period_label = factor(
+      period_label,
+      levels = period_labels[
+        periods
+      ]
+    )
+  )
+
+
+# ===========================================================
+# Check resulting value ranges
+# ===========================================================
+
+temporal_progression_df %>%
+  
+  group_by(
+    compound_label,
+    period_label
+  ) %>%
+  
+  summarise(
+    min = min(proportion),
+    max = max(proportion),
+    mean = mean(proportion),
+    .groups = "drop"
+  ) %>%
+  
+  print(n = Inf)
+
+
+################################################################################
+#### TEMPORAL PROGRESSION FIGURE
+################################################################################
+
+# Function to create one compound-disturbance row
+make_progression_row <- function(
+    data,
+    compound_name,
+    scale_max,
+    legend_title
+) {
+  
+  plot_data <- data %>%
+    filter(compound == compound_name)
+  
+  ggplot() +
+    
+    # Forest background
+    geom_raster(
+      data = forest_df,
+      aes(x = x, y = y),
+      fill = "grey95"
+    ) +
+    
+    # Compound disturbance
+    geom_raster(
+      data = plot_data,
+      aes(
+        x = x,
+        y = y,
+        fill = proportion
+      )
+    ) +
+    
+    # Ecoregions
+    geom_sf(
+      data = west_eco,
+      fill = NA,
+      color = "grey75",
+      linewidth = 0.08
+    ) +
+    
+    # Western US outline
+    geom_sf(
+      data = west_outline,
+      fill = NA,
+      color = "black",
+      linewidth = 0.2
+    ) +
+    
+    # Four temporal periods
+    facet_wrap(
+      ~period_label,
+      nrow = 1
+    ) +
+    
+    # Row-specific scale
+    scale_fill_viridis_c(
+      name = legend_title,
+      option = "magma",
+      direction = -1,
+      limits = c(0, scale_max),
+      na.value = "transparent"
+    ) +
+    
+    coord_sf(
+      xlim = c(
+        west_extent["xmin"],
+        west_extent["xmax"]
+      ),
+      ylim = c(
+        west_extent["ymin"],
+        west_extent["ymax"]
+      )
+    ) +
+    
+    theme_void() +
+    
+    theme(
+      panel.background = element_rect(
+        fill = "white",
+        color = NA
+      ),
+      
+      plot.background = element_rect(
+        fill = "white",
+        color = NA
+      ),
+      
+      strip.background = element_blank(),
+      
+      strip.text = element_text(
+        size = 9,
+        face = "bold"
+      ),
+      
+      legend.position = "right",
+      
+      legend.title = element_text(
+        size = 7
+      ),
+      
+      legend.text = element_text(
+        size = 6
+      ),
+      
+      legend.key.height = unit(
+        1.0,
+        "cm"
+      ),
+      
+      panel.spacing = unit(
+        0.08,
+        "cm"
+      )
+    )
+}
+
+# Make figs
+p_wf_bt <- make_progression_row(
+  temporal_progression_df,
+  "wf_bt",
+  0.4,
+  "Wildfire + Biotic"
+)
+
+p_wf_hd <- make_progression_row(
+  temporal_progression_df,
+  "wf_hd",
+  0.4,
+  "Wildfire + Hotter drought"
+)
+
+p_bt_hd <- make_progression_row(
+  temporal_progression_df,
+  "bt_hd",
+  1.0,
+  "Biotic + Hotter drought"
+)
+
+p_wf_bt_hd <- make_progression_row(
+  temporal_progression_df,
+  "wf_bt_hd",
+  0.4,
+  "Wildfire + Biotic +\nHotter drought"
+)
+
+# Assemble
+temporal_progression_plot <-
+  p_wf_bt /
+  p_wf_hd /
+  p_bt_hd /
+  p_wf_bt_hd
+
+temporal_progression_plot
+
+# Save
+ggsave(
+  filename = "figures/temporal_patterns/temporal_progression_compound.png",
+  plot = temporal_progression_plot,
+  width = 10,
+  height = 9,
+  dpi = 300,
+  units = "in",
+  bg = "white"
 )
