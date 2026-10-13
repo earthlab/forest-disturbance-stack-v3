@@ -661,8 +661,29 @@ temporal_spatial_df <- temporal_spatial_df %>%
 #### PLOT TEMPORAL SPATIAL FOOTPRINT
 ################################################################################
 
+# Small data frame used only to identify the facet that should receive
+# the scale bar and north arrow.
+#
+# Bottom-left panel:
+# Wildfire + Biotic + Drought, 2000-2004
+
+map_annotation_df <- data.frame(
+  compound_label = factor(
+    "Wildfire + Biotic + Drought",
+    levels = temporal_compound_labels[
+      temporal_compounds
+    ]
+  ),
+  period_label = factor(
+    "2000–2004",
+    levels = temporal_period_labels[
+      temporal_periods
+    ]
+  )
+)
+
+
 temporal_spatial_plot <- ggplot() +
-  
   
   # ---------------------------------------------------------
 # Forest background
@@ -682,7 +703,6 @@ geom_raster(
 # Compound-disturbance spatial footprint
 #
 # Each compound has one solid color.
-# Color intensity does not represent magnitude.
 # ---------------------------------------------------------
 
 geom_raster(
@@ -693,10 +713,6 @@ geom_raster(
     fill = plot_color
   )
 ) +
-  
-  
-  # Use the exact colors stored in plot_color.
-  # No legend is required because rows identify compounds.
   
   scale_fill_identity() +
   
@@ -726,13 +742,71 @@ geom_sf(
   
   
   # ---------------------------------------------------------
-# Rows = compound disturbance
-# Columns = temporal period
+# Scale bar
+#
+# The data argument restricts this layer to the facet
+# represented in map_annotation_df.
+# ---------------------------------------------------------
+
+annotation_scale(
+  data = map_annotation_df,
+  location = "bl",
+  width_hint = 0.2,
+  text_cex = 0.4,
+  pad_x = unit(
+    0.2,
+    "cm"
+  ),
+  pad_y = unit(
+    0.2,
+    "cm"
+  )
+) +
+  
+  
+  # ---------------------------------------------------------
+# North arrow
+#
+# Also restricted to the bottom-left facet.
+# ---------------------------------------------------------
+
+annotation_north_arrow(
+  data = map_annotation_df,
+  location = "bl",
+  which_north = "true",
+  style = north_arrow_fancy_orienteering(
+    text_size = 6
+  ),
+  height = unit(
+    0.5,
+    "cm"
+  ),
+  width = unit(
+    0.5,
+    "cm"
+  ),
+  pad_x = unit(
+    0.2,
+    "cm"
+  ),
+  pad_y = unit(
+    0.5,
+    "cm"
+  )
+) +
+  
+  
+  # ---------------------------------------------------------
+# Facets
+#
+# switch = "y" moves the row labels from the right side
+# to the left side.
 # ---------------------------------------------------------
 
 facet_grid(
   rows = vars(compound_label),
-  cols = vars(period_label)
+  cols = vars(period_label),
+  switch = "y"
 ) +
   
   
@@ -771,7 +845,11 @@ theme_void() +
       color = NA
     ),
     
-    # Period labels across top
+    
+    # -------------------------------------------------------
+    # Column labels
+    # -------------------------------------------------------
+    
     strip.text.x = element_text(
       size = 10,
       face = "bold",
@@ -780,16 +858,30 @@ theme_void() +
       )
     ),
     
-    # Compound labels along right side
-    strip.text.y = element_text(
+    
+    # -------------------------------------------------------
+    # Row labels
+    #
+    # angle = 90 makes these read like y-axis labels.
+    # -------------------------------------------------------
+    
+    strip.text.y.left = element_text(
       size = 9,
       face = "bold",
+      angle = 90,
       margin = margin(
-        l = 4
+        r = 4
       )
     ),
     
+    
+    # Remove facet-strip backgrounds
     strip.background = element_blank(),
+    
+    
+    # Put switched strips outside the plotting panels
+    strip.placement = "outside",
+    
     
     # Tight spacing between maps
     panel.spacing = unit(
@@ -797,12 +889,13 @@ theme_void() +
       "cm"
     ),
     
+    
     # No legend
     legend.position = "none"
   )
 
 
-# Display figure
+# Display
 temporal_spatial_plot
 
 
@@ -816,8 +909,8 @@ ggsave(
     "temporal_progression_spatial_footprint.png"
   ),
   plot = temporal_spatial_plot,
-  width = 10,
-  height = 9,
+  width = 7,
+  height = 8,
   dpi = 300,
   units = "in",
   bg = "white"
