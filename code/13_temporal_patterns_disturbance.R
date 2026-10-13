@@ -325,29 +325,77 @@ ggsave(
 
 
 ################################################################################
-#### TEMPORAL PROGRESSION OF COMPOUND DISTURBANCE
+#### TEMPORAL PROGRESSION OF SPATIAL CO-EXPOSURE
 ################################################################################
+
+# This figure shows the spatial footprint of compound disturbances within
+# four temporal windows:
+#
+#   2000-2004
+#   2005-2009
+#   2010-2014
+#   2015-2020
+#
+# Within each period, each disturbance is first collapsed across years using
+# presence/absence. Compound disturbance is then calculated from those
+# period-level presence rasters.
+#
+# For example, WF + BT during 2000-2004 means:
+#
+#   wildfire occurred at least once during 2000-2004
+#   AND
+#   biotic disturbance occurred at least once during 2000-2004
+#
+# The two disturbances do not need to occur in the same year.
+#
+# The final period contains six years; the first three contain five.
+#
+# For visualization, these binary 30 m rasters are processed using the same
+# approach as the spatial-footprint figure:
+#
+#   1. aggregate 30 m -> 300 m using the mean
+#   2. smooth using a 5 x 5 focal window
+#   3. retain smoothed values >= 0.05
+#   4. convert the retained footprint back to binary presence
+#
+# Aggregation, smoothing, and thresholding are for visualization only.
+
 
 # ===========================================================
 # Paths
 # ===========================================================
 
-# Period-level compound disturbance rasters created in Python
-progression_dir <- "data/derived/temporal_progression"
+temporal_spatial_dir <- "data/derived/temporal_spatial_coexposure"
 
 
 # ===========================================================
-# Define disturbance types and periods
+# Visualization settings
 # ===========================================================
 
-compound_types <- c(
+# Original rasters are 30 m.
+# Factor 10 produces 300 m plotting cells.
+temporal_plot_agg_factor <- 10
+
+# At 300 m resolution, a 5 x 5 focal window spans
+# approximately 1.5 km.
+temporal_focal_window <- 5
+
+# Same display threshold used for the spatial-footprint figure.
+temporal_smooth_threshold <- 0.05
+
+
+# ===========================================================
+# Define compound types and periods
+# ===========================================================
+
+temporal_compounds <- c(
   "wf_bt",
   "wf_hd",
   "bt_hd",
   "wf_bt_hd"
 )
 
-periods <- c(
+temporal_periods <- c(
   "2000_2004",
   "2005_2009",
   "2010_2014",
@@ -355,15 +403,18 @@ periods <- c(
 )
 
 
-# Labels used in the figure
-compound_labels <- c(
+# ===========================================================
+# Labels
+# ===========================================================
+
+temporal_compound_labels <- c(
   "wf_bt"    = "Wildfire + Biotic",
-  "wf_hd"    = "Wildfire + Hotter drought",
-  "bt_hd"    = "Biotic + Hotter drought",
-  "wf_bt_hd" = "Wildfire + Biotic + Hotter drought"
+  "wf_hd"    = "Wildfire + Drought",
+  "bt_hd"    = "Biotic + Drought",
+  "wf_bt_hd" = "Wildfire + Biotic + Drought"
 )
 
-period_labels <- c(
+temporal_period_labels <- c(
   "2000_2004" = "2000–2004",
   "2005_2009" = "2005–2009",
   "2010_2014" = "2010–2014",
@@ -372,37 +423,52 @@ period_labels <- c(
 
 
 # ===========================================================
-# Create raster path table
+# Colors
 # ===========================================================
 
-progression_paths <- expand.grid(
-  compound = compound_types,
-  period = periods,
+# Colors remain constant across periods.
+# Triple disturbance uses purple to match the spatial-footprint figure.
+
+temporal_compound_colors <- c(
+  "wf_bt"    = "#B2182B",  # dark red
+  "wf_hd"    = "#E66101",  # orange
+  "bt_hd"    = "#018571",  # teal
+  "wf_bt_hd" = "#7B3294"   # purple
+)
+
+
+# ===========================================================
+# Create table of raster paths
+# ===========================================================
+
+temporal_spatial_paths <- expand.grid(
+  compound = temporal_compounds,
+  period = temporal_periods,
   stringsAsFactors = FALSE
 ) %>%
   mutate(
     path = file.path(
-      progression_dir,
+      temporal_spatial_dir,
       paste0(
         compound,
         "_",
         period,
-        ".tif"
+        "_presence.tif"
       )
     )
   )
 
 
-# Check that all 16 rasters exist
-if (!all(file.exists(progression_paths$path))) {
+# Check that all expected rasters exist
+if (!all(file.exists(temporal_spatial_paths$path))) {
   
-  missing_files <- progression_paths$path[
-    !file.exists(progression_paths$path)
+  missing_files <- temporal_spatial_paths$path[
+    !file.exists(temporal_spatial_paths$path)
   ]
   
   stop(
     paste(
-      "Missing temporal progression rasters:\n",
+      "Missing temporal spatial co-exposure rasters:\n",
       paste(
         missing_files,
         collapse = "\n"
@@ -412,24 +478,35 @@ if (!all(file.exists(progression_paths$path))) {
 }
 
 
-# ===========================================================
-# Function to prepare temporal progression raster for plotting
-# ===========================================================
+################################################################################
+#### FUNCTION TO PREPARE TEMPORAL SPATIAL RASTERS FOR PLOTTING
+################################################################################
 
-progression_raster_to_df <- function(r_path) {
+temporal_spatial_to_df <- function(
+    r_path,
+    agg_factor = temporal_plot_agg_factor,
+    window_size = temporal_focal_window,
+    threshold = temporal_smooth_threshold
+) {
   
-  # Load original 30 m period-level raster
+  # ---------------------------------------------------------
+  # Load original 30 m binary raster
   #
-  # Values represent the proportion of years in the period
-  # experiencing the specified same-year compound disturbance.
+  # 0 = compound absent during the temporal period
+  # 1 = compound present during the temporal period
+  # ---------------------------------------------------------
+  
   r <- rast(r_path)
   
   
   # ---------------------------------------------------------
-  # 1. Aggregate to 300 m for visualization
+  # 1. Aggregate for visualization
   #
-  # Mean preserves the average period-level proportion within
-  # each 300 m plotting cell.
+  # Mean represents the fraction of underlying 30 m cells
+  # containing the compound disturbance.
+  #
+  # This continuous value is only an intermediate quantity
+  # used for smoothing.
   # ---------------------------------------------------------
   
   r_agg <- aggregate(
@@ -443,303 +520,302 @@ progression_raster_to_df <- function(r_path) {
   # ---------------------------------------------------------
   # 2. Smooth broad spatial pattern
   #
-  # Uses the same visualization-only focal smoothing as the
-  # other temporal-pattern maps.
+  # The normalized 5 x 5 focal window calculates the local
+  # mean of the aggregated surface.
   # ---------------------------------------------------------
+  
+  w <- matrix(
+    1 / (window_size^2),
+    nrow = window_size,
+    ncol = window_size
+  )
+  
   
   r_smooth <- focal(
     r_agg,
-    w = smooth_weights,
-    fun = mean,
+    w = w,
+    fun = sum,
     na.rm = TRUE,
-    na.policy = "omit"
+    fillvalue = NA
   )
   
   
   # ---------------------------------------------------------
-  # 3. Restrict smoothed surface to forest
+  # 3. Convert smoothed result back to displayed presence
+  #
+  # Values >= 0.05 are retained as presence.
+  # Values below the threshold are not plotted.
+  #
+  # The final visualization is therefore binary rather than
+  # a continuous proportion surface.
   # ---------------------------------------------------------
   
-  r_smooth <- mask(
-    r_smooth,
+  r_presence <- ifel(
+    r_smooth >= threshold,
+    1,
+    NA
+  )
+  
+  
+  # ---------------------------------------------------------
+  # 4. Apply aggregated forest mask
+  # ---------------------------------------------------------
+  
+  r_presence <- mask(
+    r_presence,
     forest_ds,
     maskvalues = 0
   )
   
   
-  # Consistent raster name
-  names(r_smooth) <- "proportion"
-  
-  
   # ---------------------------------------------------------
-  # 4. Convert to dataframe for ggplot
+  # 5. Convert plotting raster to dataframe
   # ---------------------------------------------------------
   
   df <- as.data.frame(
-    r_smooth,
+    r_presence,
     xy = TRUE,
     na.rm = TRUE
   )
   
   
-  # Only retain locations where compound disturbance occurred
-  df <- df %>%
-    filter(proportion > 0)
+  names(df) <- c(
+    "x",
+    "y",
+    "value"
+  )
   
   
   return(df)
 }
 
 
-# ===========================================================
-# Prepare all 16 rasters for plotting
-# ===========================================================
+################################################################################
+#### PREPARE ALL TEMPORAL SPATIAL RASTERS
+################################################################################
 
-progression_dfs <- vector(
+temporal_spatial_dfs <- vector(
   "list",
-  nrow(progression_paths)
+  nrow(temporal_spatial_paths)
 )
 
 
-for (i in seq_len(nrow(progression_paths))) {
+for (i in seq_len(nrow(temporal_spatial_paths))) {
   
   message(
     "Preparing ",
-    progression_paths$compound[i],
+    temporal_spatial_paths$compound[i],
     " — ",
-    progression_paths$period[i]
+    temporal_spatial_paths$period[i]
   )
   
-  df <- progression_raster_to_df(
-    progression_paths$path[i]
+  
+  df <- temporal_spatial_to_df(
+    temporal_spatial_paths$path[i]
   )
   
-  df$compound <- progression_paths$compound[i]
-  df$period <- progression_paths$period[i]
   
-  progression_dfs[[i]] <- df
+  # Add identifiers
+  df$compound <- temporal_spatial_paths$compound[i]
+  df$period <- temporal_spatial_paths$period[i]
+  
+  
+  temporal_spatial_dfs[[i]] <- df
 }
 
 
-# Combine into one dataframe
-temporal_progression_df <- bind_rows(
-  progression_dfs
+# Combine all 16 plotting dataframes
+temporal_spatial_df <- bind_rows(
+  temporal_spatial_dfs
 )
 
 
 # ===========================================================
-# Add figure labels and ordering
+# Add labels, ordering, and plotting colors
 # ===========================================================
 
-temporal_progression_df <- temporal_progression_df %>%
-  
+temporal_spatial_df <- temporal_spatial_df %>%
   mutate(
     
-    compound_label = compound_labels[
-      compound
-    ],
-    
-    period_label = period_labels[
-      period
-    ],
-    
     compound_label = factor(
-      compound_label,
-      levels = compound_labels[
-        compound_types
+      temporal_compound_labels[compound],
+      levels = temporal_compound_labels[
+        temporal_compounds
       ]
     ),
     
     period_label = factor(
-      period_label,
-      levels = period_labels[
-        periods
+      temporal_period_labels[period],
+      levels = temporal_period_labels[
+        temporal_periods
       ]
-    )
+    ),
+    
+    plot_color = temporal_compound_colors[
+      compound
+    ]
   )
 
 
-# ===========================================================
-# Check resulting value ranges
-# ===========================================================
+################################################################################
+#### PLOT TEMPORAL SPATIAL FOOTPRINT
+################################################################################
 
-temporal_progression_df %>%
+temporal_spatial_plot <- ggplot() +
   
-  group_by(
-    compound_label,
-    period_label
-  ) %>%
   
-  summarise(
-    min = min(proportion),
-    max = max(proportion),
-    mean = mean(proportion),
-    .groups = "drop"
-  ) %>%
+  # ---------------------------------------------------------
+# Forest background
+# ---------------------------------------------------------
+
+geom_raster(
+  data = forest_df,
+  aes(
+    x = x,
+    y = y
+  ),
+  fill = "grey95"
+) +
   
-  print(n = Inf)
+  
+  # ---------------------------------------------------------
+# Compound-disturbance spatial footprint
+#
+# Each compound has one solid color.
+# Color intensity does not represent magnitude.
+# ---------------------------------------------------------
+
+geom_raster(
+  data = temporal_spatial_df,
+  aes(
+    x = x,
+    y = y,
+    fill = plot_color
+  )
+) +
+  
+  
+  # Use the exact colors stored in plot_color.
+  # No legend is required because rows identify compounds.
+  
+  scale_fill_identity() +
+  
+  
+  # ---------------------------------------------------------
+# Ecoregion boundaries
+# ---------------------------------------------------------
+
+geom_sf(
+  data = west_eco,
+  fill = NA,
+  color = "grey75",
+  linewidth = 0.08
+) +
+  
+  
+  # ---------------------------------------------------------
+# Western US outline
+# ---------------------------------------------------------
+
+geom_sf(
+  data = west_outline,
+  fill = NA,
+  color = "black",
+  linewidth = 0.2
+) +
+  
+  
+  # ---------------------------------------------------------
+# Rows = compound disturbance
+# Columns = temporal period
+# ---------------------------------------------------------
+
+facet_grid(
+  rows = vars(compound_label),
+  cols = vars(period_label)
+) +
+  
+  
+  # ---------------------------------------------------------
+# Geographic extent
+# ---------------------------------------------------------
+
+coord_sf(
+  xlim = c(
+    west_extent["xmin"],
+    west_extent["xmax"]
+  ),
+  ylim = c(
+    west_extent["ymin"],
+    west_extent["ymax"]
+  ),
+  expand = FALSE
+) +
+  
+  
+  # ---------------------------------------------------------
+# Theme
+# ---------------------------------------------------------
+
+theme_void() +
+  
+  theme(
+    
+    panel.background = element_rect(
+      fill = "white",
+      color = NA
+    ),
+    
+    plot.background = element_rect(
+      fill = "white",
+      color = NA
+    ),
+    
+    # Period labels across top
+    strip.text.x = element_text(
+      size = 10,
+      face = "bold",
+      margin = margin(
+        b = 4
+      )
+    ),
+    
+    # Compound labels along right side
+    strip.text.y = element_text(
+      size = 9,
+      face = "bold",
+      margin = margin(
+        l = 4
+      )
+    ),
+    
+    strip.background = element_blank(),
+    
+    # Tight spacing between maps
+    panel.spacing = unit(
+      0.08,
+      "cm"
+    ),
+    
+    # No legend
+    legend.position = "none"
+  )
+
+
+# Display figure
+temporal_spatial_plot
 
 
 ################################################################################
-#### TEMPORAL PROGRESSION FIGURE
+#### SAVE FIGURE
 ################################################################################
 
-# Function to create one compound-disturbance row
-make_progression_row <- function(
-    data,
-    compound_name,
-    scale_max,
-    legend_title
-) {
-  
-  plot_data <- data %>%
-    filter(compound == compound_name)
-  
-  ggplot() +
-    
-    # Forest background
-    geom_raster(
-      data = forest_df,
-      aes(x = x, y = y),
-      fill = "grey95"
-    ) +
-    
-    # Compound disturbance
-    geom_raster(
-      data = plot_data,
-      aes(
-        x = x,
-        y = y,
-        fill = proportion
-      )
-    ) +
-    
-    # Ecoregions
-    geom_sf(
-      data = west_eco,
-      fill = NA,
-      color = "grey75",
-      linewidth = 0.08
-    ) +
-    
-    # Western US outline
-    geom_sf(
-      data = west_outline,
-      fill = NA,
-      color = "black",
-      linewidth = 0.2
-    ) +
-    
-    # Four temporal periods
-    facet_wrap(
-      ~period_label,
-      nrow = 1
-    ) +
-    
-    # Row-specific scale
-    scale_fill_viridis_c(
-      name = legend_title,
-      option = "magma",
-      direction = -1,
-      limits = c(0, scale_max),
-      na.value = "transparent"
-    ) +
-    
-    coord_sf(
-      xlim = c(
-        west_extent["xmin"],
-        west_extent["xmax"]
-      ),
-      ylim = c(
-        west_extent["ymin"],
-        west_extent["ymax"]
-      )
-    ) +
-    
-    theme_void() +
-    
-    theme(
-      panel.background = element_rect(
-        fill = "white",
-        color = NA
-      ),
-      
-      plot.background = element_rect(
-        fill = "white",
-        color = NA
-      ),
-      
-      strip.background = element_blank(),
-      
-      strip.text = element_text(
-        size = 9,
-        face = "bold"
-      ),
-      
-      legend.position = "right",
-      
-      legend.title = element_text(
-        size = 7
-      ),
-      
-      legend.text = element_text(
-        size = 6
-      ),
-      
-      legend.key.height = unit(
-        1.0,
-        "cm"
-      ),
-      
-      panel.spacing = unit(
-        0.08,
-        "cm"
-      )
-    )
-}
-
-# Make figs
-p_wf_bt <- make_progression_row(
-  temporal_progression_df,
-  "wf_bt",
-  0.4,
-  "Wildfire + Biotic"
-)
-
-p_wf_hd <- make_progression_row(
-  temporal_progression_df,
-  "wf_hd",
-  0.4,
-  "Wildfire + Hotter drought"
-)
-
-p_bt_hd <- make_progression_row(
-  temporal_progression_df,
-  "bt_hd",
-  1.0,
-  "Biotic + Hotter drought"
-)
-
-p_wf_bt_hd <- make_progression_row(
-  temporal_progression_df,
-  "wf_bt_hd",
-  0.4,
-  "Wildfire + Biotic +\nHotter drought"
-)
-
-# Assemble
-temporal_progression_plot <-
-  p_wf_bt /
-  p_wf_hd /
-  p_bt_hd /
-  p_wf_bt_hd
-
-temporal_progression_plot
-
-# Save
 ggsave(
-  filename = "figures/temporal_patterns/temporal_progression_compound.png",
-  plot = temporal_progression_plot,
+  filename = paste0(
+    "figures/temporal_patterns/",
+    "temporal_progression_spatial_footprint.png"
+  ),
+  plot = temporal_spatial_plot,
   width = 10,
   height = 9,
   dpi = 300,
