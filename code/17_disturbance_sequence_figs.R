@@ -746,10 +746,14 @@ p_lags <- ggplot(
       "#F16913",
       "#A63603"
     ),
-    breaks = c(0, 2, 5, 10, 20, 50),
+    breaks = c(0, 5, 10, 20, 50),
     limits = c(0, 50),
     labels = label_number(suffix = "%"),
-    name = "Transition area (%)"
+    name = "Transition area (%)",
+    guide = guide_colorsteps(
+      barheight = grid::unit(0.6, "cm"),
+      barwidth = grid::unit(4, "cm")
+    )
   ) +
   scale_x_continuous(
     breaks = c(1, 5, 10, 15, 20),
@@ -775,7 +779,9 @@ p_lags <- ggplot(
     ),
     axis.ticks.y = element_blank(),
     legend.position = "bottom",
-    plot.margin = margin(12, 15, 12, 15)
+    plot.margin = margin(12, 15, 12, 15),
+    legend.text = element_text(size = 9),
+    legend.title = element_text(size = 10)
   )
 
 print(p_lags)
@@ -790,7 +796,7 @@ ggsave(
     "extreme_transition_lag_heatmap.png"
   ),
   p_lags,
-  width = 7,
+  width = 9,
   height = 4,
   dpi = 300,
   bg = "white"
