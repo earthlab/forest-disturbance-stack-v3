@@ -390,13 +390,19 @@ p_wf_bt_hd <- ggplot() +
   labs(title = "Disturbance interactions")
 
 
-# Combine panels
+# Combine panels - four
 four_panel <- p_wf | p_bt | p_hd | p_wf_bt_hd 
 
 # Display
 four_panel
 
-# Save
+# Combine panels - three
+three_panel <- p_wf | p_bt | p_hd
+
+# Display
+three_panel
+
+# Save - four
 ggsave(
   filename = "figures/spatial_patterns/spatial_patterns_four_panel.png",
   plot     = four_panel,
@@ -407,7 +413,16 @@ ggsave(
   bg       = "white"
 )
 
-
+# Save - three
+ggsave(
+  filename = "figures/spatial_patterns/spatial_patterns_three_panel.png",
+  plot     = three_panel,
+  width    = 6,        # inches 
+  height   = 4,         # inches 
+  dpi      = 300,
+  units    = "in",
+  bg       = "white"
+)
 
 
 
