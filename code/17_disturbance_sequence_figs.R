@@ -599,45 +599,56 @@ ggsave(
 
 
 
+
 ################################################################################
 # Forest Disturbance Stack
 # Extreme disturbance transition lags
 # Western U.S. forests, 2000–2020
+#
+# Continuous color scale and rounded annotations
 ################################################################################
-
 
 
 # ==============================================================================
 # 1. DIRECTORIES
 # ==============================================================================
 
-
-
 input_dir <- "data/derived/disturbance_sequence/extreme_sequences"
 figure_dir <- "figures/extreme_sequences"
 
 dir.create(figure_dir, recursive = TRUE, showWarnings = FALSE)
 
+
 # ==============================================================================
 # 2. LOAD DATA
 # ==============================================================================
 
+# First to first data file
 df <- read_csv(
   file.path(input_dir, "extreme_transition_lags_westwide.csv"),
+  show_col_types = FALSE
+)
+
+# Last to first data file
+df <- readr::read_csv(
+  file.path(input_dir, "extreme_transition_lags_last_to_first_westwide.csv"),
   show_col_types = FALSE
 )
 
 print(names(df))
 print(head(df))
 
+
 # ==============================================================================
 # 3. PREPARE TRANSITION DATA
 # ==============================================================================
 
-# Expected columns:
-# from, to, lag_years, area_km2
-
-required_cols <- c("from_stage", "to_stage", "lag_years", "area_km2")
+required_cols <- c(
+  "from_stage",
+  "to_stage",
+  "lag_years",
+  "area_km2"
+)
 
 if (!all(required_cols %in% names(df))) {
   stop(
@@ -678,7 +689,10 @@ df_plot <- df %>%
   complete(
     transition = transition_levels,
     lag_years = 1:20,
-    fill = list(area_km2 = 0, percent = 0)
+    fill = list(
+      area_km2 = 0,
+      percent = 0
+    )
   ) %>%
   mutate(
     transition = factor(
@@ -687,8 +701,9 @@ df_plot <- df %>%
     )
   )
 
+
 # ==============================================================================
-# 4. TRANSITION TOTALS
+# 4. TRANSITION TOTALS AND LABELS
 # ==============================================================================
 
 transition_totals <- df_plot %>%
@@ -700,7 +715,6 @@ transition_totals <- df_plot %>%
 
 print(transition_totals)
 
-# Create labels with total transition area
 transition_labels <- transition_totals %>%
   mutate(
     label = paste0(
@@ -713,8 +727,33 @@ transition_labels <- transition_totals %>%
   select(transition, label) %>%
   deframe()
 
+
 # ==============================================================================
-# 5. HEATMAP
+# 5. COLORS
+#
+# Choose one palette below.
+# Colors are interpolated continuously (no bins).
+# ==============================================================================
+
+
+
+#Option 2: Orange (uncomment to use)
+heatmap_colors <- c(
+   "#FFF5EB",
+   "#FDD0A2",
+   "#FDAE6B",
+   "#F16913",
+   "#A63603"
+ )
+
+# Maximum observed transition percentage
+max_percent <- max(df_plot$percent, na.rm = TRUE)
+
+print(max_percent)
+
+
+# ==============================================================================
+# 6. HEATMAP
 # ==============================================================================
 
 p_lags <- ggplot(
@@ -725,49 +764,58 @@ p_lags <- ggplot(
     fill = percent
   )
 ) +
+  
   geom_tile(
     color = "white",
     linewidth = 0.35,
     width = 0.95,
     height = 0.85
   ) +
+  
+  # Annotate cells representing at least 10%
+  # Percentages rounded to nearest whole number
   geom_text(
     aes(
-      label = ifelse(percent >= 10, sprintf("%.1f", percent), "")
+      label = ifelse(
+        percent >= 10,
+        sprintf("%.0f", percent),
+        ""
+      )
     ),
     size = 3,
     color = "black"
   ) +
-  scale_fill_stepsn(
-    colors = c(
-      "#FFF5EB",
-      "#FDD0A2",
-      "#FDAE6B",
-      "#F16913",
-      "#A63603"
-    ),
-    breaks = c(0, 5, 10, 20, 50),
-    limits = c(0, 50),
+  
+  # Continuous color scale
+  scale_fill_gradientn(
+    colors = heatmap_colors,
+    limits = c(0, max_percent),
+    breaks = pretty(c(0, max_percent), n = 5),
     labels = label_number(suffix = "%"),
     name = "Transition area (%)",
-    guide = guide_colorsteps(
+    guide = guide_colorbar(
       barheight = grid::unit(0.6, "cm"),
       barwidth = grid::unit(4, "cm")
     )
   ) +
+  
   scale_x_continuous(
     breaks = c(1, 5, 10, 15, 20),
     expand = expansion(add = 0.5)
   ) +
+  
   scale_y_discrete(
     labels = transition_labels,
     expand = expansion(add = 0.5)
-  ) + 
+  ) +
+  
   labs(
     x = "Years between first observations",
     y = NULL
   ) +
+  
   theme_classic(base_size = 12) +
+  
   theme(
     axis.text.y = element_text(
       color = "black",
@@ -784,16 +832,23 @@ p_lags <- ggplot(
     legend.title = element_text(size = 10)
   )
 
+
+# ==============================================================================
+# 7. DISPLAY
+# ==============================================================================
+
 print(p_lags)
 
+
 # ==============================================================================
-# 6. SAVE FIGURE
+# 8. SAVE FIGURE
 # ==============================================================================
 
+# First to first save
 ggsave(
   file.path(
     figure_dir,
-    "extreme_transition_lag_heatmap.png"
+    "extreme_transition_lag_heatmap_continuous.png"
   ),
   p_lags,
   width = 9,
@@ -803,7 +858,18 @@ ggsave(
 )
 
 
-
+# Last to first save
+ggsave(
+  file.path(
+    figure_dir,
+    "extreme_transition_lag_last_to_first.png"
+  ),
+  p_lags,
+  width = 9,
+  height = 4,
+  dpi = 300,
+  bg = "white"
+)
 
 
 
