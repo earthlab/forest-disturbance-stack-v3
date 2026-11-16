@@ -21,7 +21,7 @@ PD_ANY="(A <= -200)"
 
 # EXTREME disturbance thresholds
 WF_EXT="(A >= 2.25)"
-BT_EXT="(A >= 14.94)"    #95th percentile
+BT_EXT="(A >= 26.24)"    #95th percentile
 HD_EXT="(A >= 6)"
 PD_EXT="(A <= -400)"
 

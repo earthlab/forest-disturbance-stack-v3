@@ -16,7 +16,7 @@ MASK="${RESAMPLED_DIR}/forest_mask_30m_resampled.tif"
 # Input rasters (already subsetted & resampled; each has 21 bands for 2000..2020)
 INPUTS=(
     "${RESAMPLED_DIR}/wildfire_cbi_30m_resampled.tif"
-    "${RESAMPLED_DIR}/biotic_gridded_1km_all_years_severity_30m_resampled.tif"
+    "${RESAMPLED_DIR}/biotic_normscitcc_30m_resampled.tif"
     "${RESAMPLED_DIR}/hd_fingerprint_30m_resampled.tif"
     "${RESAMPLED_DIR}/pdsi_annual_30m_resampled.tif"
 )
