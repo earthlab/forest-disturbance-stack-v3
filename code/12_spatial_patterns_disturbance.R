@@ -279,7 +279,7 @@ wf_legend_labels <- c(
 
 bt_legend_labels <- c(
   "BT (any)"  = "% > 0.5",
-  "BT (extr)" = "% ≥ 14.94"
+  "BT (extr)" = "% ≥ 26.24"
 )
 
 hd_legend_labels <- c(

@@ -361,11 +361,19 @@ make_panel <- function(threshold, combo, show_legend = TRUE,
     scale_fill_viridis_c(
       option = "magma",
       direction = -1,
-      trans = "sqrt",
       limits = c(0, fill_max),
+      
+      # Integer-only breaks
+      breaks = {
+        step <- max(1, ceiling(fill_max / 4))
+        seq(0, floor(fill_max), by = step)
+      },
+      labels = scales::label_number(accuracy = 1),
+      
       oob = scales::squish,
       na.value = "transparent",
       name = NULL,
+      
       guide = guide_colorbar(
         barwidth = grid::unit(2.5, "cm"),
         barheight = grid::unit(0.3, "cm")
@@ -406,12 +414,12 @@ make_panel <- function(threshold, combo, show_legend = TRUE,
       # Scale bar: bottom-left
       annotation_scale(
         location = "bl",
-        width_hint = 0.25,
+        width_hint = 0.2,
         unit_category = "metric",
-        text_cex = 0.7,
+        text_cex = 0.4,
         line_width = 0.5,
         pad_x = grid::unit(0.20, "cm"),
-        pad_y = grid::unit(0.15, "cm")
+        pad_y = grid::unit(0.2, "cm")
       ) +
       
       # Compass rose: bottom-left, above scale bar
@@ -422,10 +430,10 @@ make_panel <- function(threshold, combo, show_legend = TRUE,
           text_size = 7,
           line_width = 0.5
         ),
-        height = grid::unit(0.8, "cm"),
-        width = grid::unit(0.8, "cm"),
+        height = grid::unit(0.5, "cm"),
+        width = grid::unit(0.5, "cm"),
         pad_x = grid::unit(0.20, "cm"),
-        pad_y = grid::unit(1.10, "cm")
+        pad_y = grid::unit(0.50, "cm")
       )
   }
   
@@ -439,33 +447,42 @@ make_panel <- function(threshold, combo, show_legend = TRUE,
 
 make_figure <- function(threshold) {
   
-  # Row 1: single disturbances
+  # Row 1: singles
   p_wf <- make_panel(threshold, "wf")
   p_bt <- make_panel(threshold, "bt")
   p_hd <- make_panel(threshold, "hd")
   
-  # Row 2: double combinations
+  # Row 2: doubles
   p_wf_bt <- make_panel(threshold, "wf_bt")
   p_wf_hd <- make_panel(threshold, "wf_hd")
   p_bt_hd <- make_panel(threshold, "bt_hd")
   
-  # Row 3: triple combination
+  # Row 3: triple
   p_triple <- make_panel(
     threshold,
     "wf_bt_hd",
-    show_legend = TRUE,
     show_map_elements = TRUE
   )
   
-  # Blank panels to center the triple map
-  blank <- plot_spacer()
+  # Explicit layout: same three columns in every row
+  design <- "
+    ABC
+    DEF
+    G##
+  "
   
-  figure <- (
-    (p_wf | p_bt | p_hd) /
-      (p_wf_bt | p_wf_hd | p_bt_hd) /
-      (p_triple | blank | blank)
+  figure <- wrap_plots(
+    A = p_wf,
+    B = p_bt,
+    C = p_hd,
+    D = p_wf_bt,
+    E = p_wf_hd,
+    F = p_bt_hd,
+    G = p_triple,
+    design = design
   ) +
     plot_layout(
+      widths = c(1, 1, 1),
       heights = c(1, 1, 1),
       guides = "keep"
     )
